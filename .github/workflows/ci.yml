@@ -1,0 +1,44 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  python:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install
+        run: pip install -e ".[dev,mqtt,web]"
+      - name: Test
+        run: pytest -q
+
+  firmware:
+    # 実機レス期間の FW ビルドチェック (pio run はコンパイルのみ)。
+    # ESP32-C5 の pioarduino board 定義は実機未検証のため、当面は失敗を
+    # ブロッカーにしない (検証後に continue-on-error を外す)。
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    strategy:
+      matrix:
+        project: [firmware/anchor, firmware/tag]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install PlatformIO
+        run: pip install platformio
+      - name: Build
+        # firmware/ が存在しないブランチ (サーバー側のみの PR など) ではスキップ
+        run: |
+          if [ -d "${{ matrix.project }}" ]; then
+            pio run -d "${{ matrix.project }}"
+          else
+            echo "skip: ${{ matrix.project }} not present on this branch"
+          fi
