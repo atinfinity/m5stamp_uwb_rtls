@@ -35,4 +35,10 @@ jobs:
       - name: Install PlatformIO
         run: pip install platformio
       - name: Build
-        run: pio run -d ${{ matrix.project }}
+        # firmware/ が存在しないブランチ (サーバー側のみの PR など) ではスキップ
+        run: |
+          if [ -d "${{ matrix.project }}" ]; then
+            pio run -d "${{ matrix.project }}"
+          else
+            echo "skip: ${{ matrix.project }} not present on this branch"
+          fi
