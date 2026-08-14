@@ -74,7 +74,7 @@ firmware/tag/
 | タスク | 優先度 | 周期/契機 | 役割 |
 |---|---|---|---|
 | `ranging_task` | 高 | TDMA スロット到来 | アンカー巡回 DS-TWR → RangeSet 生成 → solver 呼出し → output へ渡す |
-| `net_task` | 中 | イベント駆動 | MQTT 送受信、SNTP 再同期(15 分毎)、OTA 受付 |
+| `net_task` | 中 | イベント駆動 | MQTT 送受信、SNTP 再同期(**5 分毎・スルー補正+ドリフト率補正**、rtls-design.md §4.9)、OTA 受付 |
 | `monitor_task` | 低 | 1 s | ヒープ・測距成功率・スロットずれの統計、LED 表示 |
 
 solver は `ranging_task` 内で同期実行する(実測目標 < 5 ms、§7)。キュー渡しにしないことでスロット内で解算まで完結し、座標のタイムスタンプが単純になる。

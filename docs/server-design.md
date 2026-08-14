@@ -29,6 +29,7 @@
 | 設定・検証 | pydantic v2 + YAML | `config.yaml` と受信 JSON のスキーマ検証を同じ機構で行う |
 | Web / 可視化 | FastAPI + uvicorn、WebSocket | 解算プロセスに同居させ、追加ブローカー不要 |
 | 配布 | venv + `pip install -e .`(常設時は Docker Compose で Mosquitto と同梱) | |
+| 時刻同期基盤 | **chrony(NTP サーバー)をサーバーホストに同居** | タグの SNTP 同期先(rtls-design.md §4.9)。インターネット NTP 非依存で LAN 完結 |
 
 ## 3. モジュール構成
 
