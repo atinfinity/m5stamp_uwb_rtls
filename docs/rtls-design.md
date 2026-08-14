@@ -37,6 +37,8 @@ M5Stack Stamp UWB(Qorvo QM33120W 搭載)を用いて、屋内フロア(20〜50 m
 
 タグ主導で各アンカーに順次 DS-TWR を行い、得られた距離セット {d₁…dₙ} から 2D 座標を最小二乗法で解く。
 
+→ 方式別の詳細設計: **[ds-twr-design.md](ds-twr-design.md)**(採用)/ **[ss-twr-design.md](ss-twr-design.md)**(予備・切替条件)/ **[tdoa-design.md](tdoa-design.md)**(将来・実現条件)
+
 ## 3. ハードウェア構成
 
 ### 3.1 ノード構成(アンカー・タグ共通の基本ユニット)
