@@ -1,5 +1,7 @@
 # M5Stamp UWB RTLS
 
+[![CI](https://github.com/atinfinity/m5stamp_uwb_rtls/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/atinfinity/m5stamp_uwb_rtls/actions/workflows/ci.yml)
+
 M5Stack Stamp UWB (Qorvo QM33120W) + Stamp C5 による屋内 2D RTLS(リアルタイム測位システム)。
 
 - 設計書: [docs/rtls-design.md](docs/rtls-design.md)(基本設計)ほか [docs/](docs/) 配下
@@ -10,25 +12,26 @@ M5Stack Stamp UWB (Qorvo QM33120W) + Stamp C5 による屋内 2D RTLS(リアル�
 
 ## クイックスタート(実機不要)
 
+パッケージ管理は [uv](https://docs.astral.sh/uv/) を使用(`brew install uv`)。
+
 ```bash
-python3 -m venv .venv && source .venv/bin/activate
-pip install -e ".[dev,mqtt,web]"
+uv sync --all-extras   # .venv 作成 + 依存インストール (dev グループ含む)
 
 # テスト (解算・セル・e2e 回帰: シミュレータ→リプレイで CEP50 ≤ 0.30 m を検証)
-pytest
+uv run pytest
 
 # 合成データ生成 → リプレイ
-python tools/simulate.py --config server/config.yaml --duration-s 120 \
+uv run python tools/simulate.py --config server/config.yaml --duration-s 120 \
     --out logs/sim_ranges.jsonl --truth logs/sim_truth.jsonl
-python -m server.replay logs/sim_ranges.jsonl --out logs/positions.jsonl
+uv run python -m server.replay logs/sim_ranges.jsonl --out logs/positions.jsonl
 ```
 
 ## ライブ実行(仮想タグで end-to-end)
 
 ```bash
-mosquitto &                                   # MQTT ブローカー (brew install mosquitto)
-python -m server.app --config server/config.yaml   # 測位サーバー + Web UI
-python tools/virtual_tag.py                        # 仮想タグ 3 台 (別ターミナル)
+mosquitto &                                          # MQTT ブローカー (brew install mosquitto)
+uv run python -m server.app --config server/config.yaml   # 測位サーバー + Web UI
+uv run python tools/virtual_tag.py                        # 仮想タグ 3 台 (別ターミナル)
 ```
 
 ブラウザで http://localhost:8000 — フロアマップにタグ位置・軌跡・セルハンドオーバーがリアルタイム表示される。実機タグが用意できたら virtual_tag を実機に差し替えるだけで同じ経路が動く。
