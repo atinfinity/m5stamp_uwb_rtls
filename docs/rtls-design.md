@@ -46,6 +46,31 @@ M5Stack Stamp UWB(Qorvo QM33120W 搭載)を用いて、屋内フロア(20〜50 m
 - Stamp C5 の背面 FPC コネクタ(G23, G0, G24, G25, G26, G27, G11, G12)と、公式サンプルのピン割当(SCK=G12, MISO=G26, MOSI=G27, CS=G11, RST=G25, IRQ=G0)が一致しており、**はんだ付け不要で公式サンプルがそのまま動く公式想定の組み合わせ**。
 - 無印版 Stamp UWB(キャスタレーション実装)は量産・独自基板化フェーズ向け。プロトタイプでは FPC 版を推奨。
 
+**接続関係図:**
+
+```mermaid
+flowchart LR
+    subgraph tagnode["タグノード ×2〜5"]
+        LIPO["LiPo 3.7V<br/>500〜1000 mAh"]
+        C5T["M5Stamp C5<br/>(ESP32-C5)"]
+        UWBT["Stamp UWB F<br/>(QM33120W)"]
+        LIPO -- "BAT 端子<br/>(SGM40567 充電IC 内蔵)" --> C5T
+        C5T <-- "0.5mm-12P FPC ケーブル<br/>SPI: SCK=G12, MISO=G26,<br/>MOSI=G27, CS=G11<br/>制御: RST=G25, IRQ=G0" --> UWBT
+    end
+    subgraph anchornode["アンカーノード ×8〜12"]
+        AC["USB AC アダプタ /<br/>モバイルバッテリー"]
+        C5A["M5Stamp C5<br/>(ESP32-C5)"]
+        UWBA["Stamp UWB F<br/>(QM33120W)"]
+        AC -- "USB Type-C 5V" --> C5A
+        C5A <-- "0.5mm-12P FPC ケーブル<br/>(ピン割当はタグと同一)" --> UWBA
+    end
+    UWBT <-. "UWB Ch9 7.9872 GHz<br/>DS-TWR 測距" .-> UWBA
+    C5T -. "Wi-Fi 2.4/5 GHz<br/>(MQTT テレメトリ)" .-> AP["Wi-Fi AP"]
+    AP --- PC["PC(測位サーバー)<br/>Mosquitto + Python 解算/可視化"]
+```
+
+FPC ケーブル 1 本で SPI 5 線+制御 2 線+電源がまとまるため、ノード側の配線作業は「FPC を挿すだけ」。アンカーは Wi-Fi 接続不要(§4.3)なので、給電と UWB 応答のみのスタンドアロン動作。
+
 | 役割 | 構成 | 電源 |
 |---|---|---|
 | アンカー(8〜12 台) | Stamp C5 + Stamp UWB F | USB Type-C 給電(USB AC アダプタまたはモバイルバッテリー常時給電) |
