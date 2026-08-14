@@ -1,0 +1,35 @@
+# RTLS 測位サーバー設定 (server-design.md §10)
+# 50m フロア・9 アンカー・4 セルの基本設計 §3.3 の配置例。
+mqtt:
+  host: 127.0.0.1
+  port: 1883
+floor:
+  width_m: 50.0
+  height_m: 50.0
+  tag_height_m: 1.0
+anchors:
+  "0x0010": { x: 0.0,  y: 0.0,  z: 2.2, bias_mm: 0 }
+  "0x0011": { x: 25.0, y: 0.0,  z: 2.2, bias_mm: 0 }
+  "0x0012": { x: 50.0, y: 0.0,  z: 2.2, bias_mm: 0 }
+  "0x0013": { x: 0.0,  y: 25.0, z: 2.2, bias_mm: 0 }
+  "0x0014": { x: 25.0, y: 25.0, z: 2.2, bias_mm: 0 }
+  "0x0015": { x: 50.0, y: 25.0, z: 2.2, bias_mm: 0 }
+  "0x0016": { x: 0.0,  y: 50.0, z: 2.2, bias_mm: 0 }
+  "0x0017": { x: 25.0, y: 50.0, z: 2.2, bias_mm: 0 }
+  "0x0018": { x: 50.0, y: 50.0, z: 2.2, bias_mm: 0 }
+cells:
+  A: { rect: [0, 0, 25, 25],   anchors: ["0x0010", "0x0011", "0x0013", "0x0014"] }
+  B: { rect: [25, 0, 50, 25],  anchors: ["0x0011", "0x0012", "0x0014", "0x0015"] }
+  C: { rect: [0, 25, 25, 50],  anchors: ["0x0013", "0x0014", "0x0016", "0x0017"] }
+  D: { rect: [25, 25, 50, 50], anchors: ["0x0014", "0x0015", "0x0017", "0x0018"] }
+tags: ["0x0001", "0x0002", "0x0003"]
+tuning:
+  max_age_ms: 500
+  v_max_ms: 2.0
+  gate_margin_m: 0.6
+  residual_gate_m: 0.5
+  sigma_a: 1.0
+  sigma_m_floor: 0.15
+  stale_sec: 2.0
+  lost_sec: 10.0
+  handover_margin_m: 2.0

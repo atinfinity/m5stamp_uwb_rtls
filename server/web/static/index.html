@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>RTLS Floor Map</title>
+<style>
+  :root {
+    --bg: #10171A; --surface: #172023; --text: #E2E9EA; --muted: #93A4A8;
+    --accent: #4FC3CF; --border: #2A3538; --warn: #E5C67E; --ok: #6FCF8E;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text);
+         font-family: "Hiragino Sans", "Yu Gothic", sans-serif; }
+  header { padding: 0.8rem 1.2rem; border-bottom: 1px solid var(--border);
+           display: flex; gap: 1.5rem; align-items: baseline; }
+  h1 { font-size: 1rem; margin: 0; color: var(--accent); }
+  #status { font-size: 0.8rem; color: var(--muted); }
+  main { display: flex; gap: 1rem; padding: 1rem; flex-wrap: wrap; }
+  canvas { background: var(--surface); border: 1px solid var(--border); border-radius: 6px; }
+  #tags { font-size: 0.8rem; min-width: 260px; }
+  table { border-collapse: collapse; width: 100%; }
+  td, th { padding: 0.3rem 0.6rem; border-bottom: 1px solid var(--border); text-align: left; }
+  th { color: var(--muted); font-weight: 600; }
+  .TRACKING { color: var(--ok); } .COASTING, .STALE { color: var(--warn); }
+</style>
+</head>
+<body>
+<header>
+  <h1>M5Stamp UWB RTLS</h1>
+  <span id="status">connecting…</span>
+</header>
+<main>
+  <canvas id="map" width="600" height="600"></canvas>
+  <div id="tags"><table>
+    <thead><tr><th>tag</th><th>x</th><th>y</th><th>cell</th><th>state</th><th>res</th></tr></thead>
+    <tbody id="tagbody"></tbody>
+  </table></div>
+</main>
+<script>
+const canvas = document.getElementById("map");
+const ctx = canvas.getContext("2d");
+const statusEl = document.getElementById("status");
+const tagbody = document.getElementById("tagbody");
+let floor = null;
+const tags = new Map();   // tag -> {x_m, y_m, state, cell, residual_m, trail: []}
+const TRAIL_MS = 30000;
+
+function sx(x) { return x / floor.width_m * canvas.width; }
+function sy(y) { return canvas.height - y / floor.height_m * canvas.height; }
+
+const TAG_COLORS = ["#4FC3CF", "#E5C67E", "#CF9BE8", "#6FCF8E", "#E08886"];
+function colorOf(tag) {
+  const i = parseInt(tag, 16) % TAG_COLORS.length;
+  return TAG_COLORS[i];
+}
+
+function draw() {
+  if (!floor) return;
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  // cells
+  ctx.strokeStyle = "#2A3538"; ctx.lineWidth = 1;
+  for (const c of Object.values(floor.cells)) {
+    const [x0, y0, x1, y1] = c.rect;
+    ctx.strokeRect(sx(x0), sy(y1), sx(x1) - sx(x0), sy(y0) - sy(y1));
+  }
+  // anchors
+  for (const [name, a] of Object.entries(floor.anchors)) {
+    ctx.fillStyle = "#93A4A8";
+    ctx.beginPath(); ctx.arc(sx(a.x), sy(a.y), 5, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = "#5A6B70"; ctx.font = "10px monospace";
+    ctx.fillText(name, sx(a.x) + 7, sy(a.y) - 5);
+  }
+  // tags
+  const now = Date.now();
+  for (const [name, t] of tags) {
+    if (t.state === "LOST") continue;
+    const color = colorOf(name);
+    // trail
+    ctx.strokeStyle = color; ctx.globalAlpha = 0.35; ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    let first = true;
+    for (const p of t.trail) {
+      if (now - p.at > TRAIL_MS) continue;
+      if (first) { ctx.moveTo(sx(p.x), sy(p.y)); first = false; }
+      else ctx.lineTo(sx(p.x), sy(p.y));
+    }
+    ctx.stroke(); ctx.globalAlpha = 1.0;
+    // marker
+    ctx.fillStyle = color;
+    ctx.beginPath(); ctx.arc(sx(t.x_m), sy(t.y_m), 7, 0, Math.PI * 2); ctx.fill();
+    if (t.state !== "TRACKING") {
+      ctx.strokeStyle = "#E5C67E"; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.arc(sx(t.x_m), sy(t.y_m), 11, 0, Math.PI * 2); ctx.stroke();
+    }
+    ctx.fillStyle = "#E2E9EA"; ctx.font = "11px monospace";
+    ctx.fillText(name, sx(t.x_m) + 10, sy(t.y_m) + 4);
+  }
+  // table
+  tagbody.innerHTML = [...tags.entries()].map(([name, t]) =>
+    `<tr><td>${name}</td><td>${t.x_m.toFixed(2)}</td><td>${t.y_m.toFixed(2)}</td>` +
+    `<td>${t.cell}</td><td class="${t.state}">${t.state}</td>` +
+    `<td>${(t.residual_m ?? 0).toFixed(2)}</td></tr>`).join("");
+}
+
+function onPosition(m) {
+  const name = m.tag;
+  let t = tags.get(name);
+  if (!t) { t = { trail: [] }; tags.set(name, t); }
+  Object.assign(t, { x_m: m.x_m, y_m: m.y_m, state: m.state, cell: m.cell,
+                     residual_m: m.quality ? m.quality.residual_m : 0 });
+  t.trail.push({ x: m.x_m, y: m.y_m, at: Date.now() });
+  while (t.trail.length > 400) t.trail.shift();
+  draw();
+}
+
+function connectWs() {
+  const ws = new WebSocket(`ws://${location.host}/ws`);
+  ws.onopen = () => { statusEl.textContent = "live"; };
+  ws.onmessage = (ev) => {
+    const m = JSON.parse(ev.data);
+    if (m.type === "position") onPosition(m);
+  };
+  ws.onclose = () => {
+    statusEl.textContent = "disconnected — retrying";
+    setTimeout(connectWs, 2000);
+  };
+}
+
+async function init() {
+  floor = await (await fetch("/api/floor")).json();
+  // 既存タグの初期表示
+  const existing = await (await fetch("/api/tags")).json();
+  for (const [name, t] of Object.entries(existing)) {
+    tags.set(name, { ...t, trail: [] });
+  }
+  draw();
+  connectWs();
+}
+init();
+</script>
+</body>
+</html>
