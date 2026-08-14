@@ -33,8 +33,7 @@ pio run -t upload
 2. タグのシリアルを capture.py で採取:
 
 ```bash
-pip install pyserial
-python tools/step1/capture.py --port /dev/tty.usbmodemXXXX \
+uv run --with pyserial python tools/step1/capture.py --port /dev/tty.usbmodemXXXX \
     --true-dist-m 5.000 --count 1000 --out logs/dist5m.csv
 ```
 

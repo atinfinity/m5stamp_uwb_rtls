@@ -17,6 +17,8 @@ dependencies = [
 [project.optional-dependencies]
 mqtt = ["aiomqtt>=2.0"]
 web = ["fastapi>=0.110", "uvicorn>=0.29"]
+
+[dependency-groups]
 dev = ["pytest>=8.0"]
 
 [tool.setuptools.packages.find]
