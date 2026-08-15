@@ -23,9 +23,10 @@ from server.simulate import SimParams, simulate  # noqa: E402
 
 
 async def run(config_path: str, rate_hz: float, duration_s: float,
-              publish_truth: bool = True) -> None:
+              publish_truth: bool = True,
+              obstacles: tuple[tuple[float, float, float, float], ...] = ()) -> None:
     config = load_config(config_path)
-    params = SimParams(rate_hz=rate_hz)
+    params = SimParams(rate_hz=rate_hz, obstacles=obstacles)
     n_tags = len(config.tags)
     epoch_s = 1.0 / rate_hz
     slot_s = epoch_s / max(n_tags, 1)
@@ -62,10 +63,13 @@ def main() -> int:
     ap.add_argument("--duration-s", type=float, default=3600.0)
     ap.add_argument("--no-truth", action="store_true",
                     help="真値 (rtls/sim/truth) を publish しない")
+    ap.add_argument("--obstacle", action="append", default=[], metavar="X0,Y0,X1,Y1",
+                    help="遮蔽物矩形 [m] (繰り返し可)。空間 NLoS モデルの UI 確認用")
     args = ap.parse_args()
+    obstacles = tuple(tuple(float(v) for v in spec.split(",")) for spec in args.obstacle)
     try:
         asyncio.run(run(args.config, args.rate_hz, args.duration_s,
-                        publish_truth=not args.no_truth))
+                        publish_truth=not args.no_truth, obstacles=obstacles))
     except KeyboardInterrupt:
         pass
     return 0

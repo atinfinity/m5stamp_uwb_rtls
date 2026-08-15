@@ -25,13 +25,21 @@ def main() -> int:
     ap.add_argument("--sigma-m", type=float, default=0.05)
     ap.add_argument("--nlos-prob", type=float, default=0.05)
     ap.add_argument("--dropout-prob", type=float, default=0.03)
+    ap.add_argument("--obstacle", action="append", default=[], metavar="X0,Y0,X1,Y1",
+                    help="遮蔽物矩形 [m] (繰り返し可)。見通し線が横切る測距は常時 NLoS になる")
     ap.add_argument("--out", required=True)
     ap.add_argument("--truth", required=True)
     args = ap.parse_args()
 
+    obstacles = tuple(tuple(float(v) for v in spec.split(",")) for spec in args.obstacle)
+    for r in obstacles:
+        if len(r) != 4:
+            ap.error(f"--obstacle の形式が不正: {r}")
+
     config = load_config(args.config)
     params = SimParams(rate_hz=args.rate_hz, sigma_m=args.sigma_m,
-                       nlos_prob=args.nlos_prob, dropout_prob=args.dropout_prob)
+                       nlos_prob=args.nlos_prob, dropout_prob=args.dropout_prob,
+                       obstacles=obstacles)
 
     out = Path(args.out)
     truth_path = Path(args.truth)
