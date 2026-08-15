@@ -152,3 +152,29 @@ seq,ok,d_mm,elapsed_ms,exchange_us,err
 [Step 1 DS-TWR](../docs/reports/step1-ds-twr-report.md) /
 [SS-TWR 対照](../docs/reports/ss-twr-report.md) /
 [TDoA PoC](../docs/reports/tdoa-poc-report.md)
+
+## B案: タグ上計算 (env:tag に統合, Issue #28)
+
+本番モードのタグは `rtls/config/anchors`・`rtls/config/tuning` を受信すると
+**タグ上解算 (rtls_solver) とオンボードセル選択**が有効になる。設定は NVS に
+永続化され、Wi-Fi 断・再起動後も解算を継続する。設定未受信の間は ranges 送信のみ
+(A案互換) で動作する。
+
+**設定の配布** (サーバー側 PC から):
+
+```bash
+uv run python tools/publish_config.py    # server/config.yaml → rtls/config/# へ retained 配布
+```
+
+**動作モード** (NVS 永続。タグの USB シリアルにコマンドを送って切替):
+
+| コマンド | モード | 出力 |
+|---|---|---|
+| `mode HYBRID` | 既定 | ranges + position を MQTT (A案サーバーと併用可、リプレイ資産も残る) |
+| `mode QUIET` | 本番 | position のみ MQTT |
+| `mode STANDALONE` | ロボット搭載 | UART (Serial1, 115200) へ 30 byte バイナリフレームのみ (tag-design.md §7) |
+| `status` | — | 現在のモード・設定バージョン・ソルバー状態を表示 |
+
+- タグ側 position には `"src":"tag"` が付く (サーバー解算の position と区別)
+- SNTP 未同期時は 500 ms 周期のフリーランで測距する (単一タグ前提のフォールバック)
+- UART ピンは `RTLS_UART_TX/RX` ビルドフラグで変更可
