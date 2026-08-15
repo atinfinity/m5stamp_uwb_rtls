@@ -4,7 +4,9 @@
 |---|---|---|
 | `tag`(本番) | `tag` | アンカー巡回 + TDMA + Wi-Fi/MQTT(Step 2/3、Issue [#6](https://github.com/atinfinity/m5stamp_uwb_rtls/issues/6)) |
 | `tag`(計測) | `tag_step1` | 1対1 DS-TWR + CSV 出力(Step 1、Issue [#1](https://github.com/atinfinity/m5stamp_uwb_rtls/issues/1)) |
+| `tag`(計測・SS) | `tag_step1_ss` | 1対1 SS-TWR 検証(Issue [#14](https://github.com/atinfinity/m5stamp_uwb_rtls/issues/14)) |
 | `anchor` | `anchor` | DS-TWR 応答専用 |
+| `anchor`(SS) | `anchor_ss` | SS-TWR 応答(検証用) |
 
 Arduino 非依存ロジック(TDMA スロット判定・MQTT ペイロード生成/解析)は `lib/rtls_common/` にあり、
 `./test_native/run.sh` でホスト上の単体テストが実行できる(CI でも実行)。
@@ -78,6 +80,29 @@ python tools/step1/analyze.py logs/dist*.csv
 - 交換時間 p95 → 基本設計 §4.4 の TDMA スロット幅
 - `rtls_common.h` のタイミング定数(`responseTxDelayUus` を 3000→1500 µs に詰める実験は
   `kDsResponseTxDelayUus` を変更して同手順で比較)
+
+## SS-TWR 検証(Issue #14、ss-twr-design.md §4/§6)
+
+DS-TWR の対照試験として、**同じ設置・同じ距離**で env を SS に替えて同手順を繰り返す:
+
+```bash
+cd firmware/anchor && pio run -e anchor_ss -t upload      # アンカーを SS 応答に
+cd ../tag && pio run -e tag_step1_ss -t upload            # タグを SS 計測に
+# capture.py / analyze.py は共通 (mode は CSV メタデータから自動判別)
+python tools/step1/analyze.py logs/ds_dist5m.csv logs/ss_dist5m.csv   # DS/SS を並べて比較
+```
+
+判定(3 条件すべて満たしたら SS-TWR を予備方式として有効化):
+
+| # | 条件 | 見方 |
+|---|---|---|
+| ① | σ ≤ 15 cm・バイアス ≤ 10 cm | **CFO 補償の有無がここで判明**。補償なしなら m 級誤差が出て即不成立(ss-twr-design.md §2.2) |
+| ② | 交換時間が DS 比 30% 以上短い | analyze.py の p50 を比較 |
+| ③ | リプレイで CEP50 ≤ 30 cm 維持 | Step 2 以降のログで確認 |
+
+- bias は方式ごとに異なりうるため、**DS/SS 別々に校正値を記録**する
+- 温度依存(始動直後 vs 30 分後)も §6-1 に従い両方式で採取する
+- 不成立の場合は実測値を ss-twr-design.md に追記して Issue #14 を close
 
 ## タグ CSV 出力仕様
 
