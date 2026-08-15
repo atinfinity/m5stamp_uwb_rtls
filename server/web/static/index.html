@@ -190,11 +190,36 @@ function draw() {
   }
   const showTruth = document.getElementById("showTruth").checked;
   for (const [name, t] of tags) {
-    if (t.state === "LOST" || t.x_m == null) continue;
     const color = colorOf(name);
     // 寿命判定はデータ時刻 (t_ms) 基準: リプレイの一時停止中は時間が進まず
     // 軌跡が凍結され、再生速度によらず「データ 30 秒ぶん」が表示される
     const ref = t.lastTms || 0;
+    const truthRef = t.lastTruthTms || 0;
+    // ---- 真値系 (dev) は位置推定の有無・状態に依存せず描く ----
+    if (showTruth && t.truthTrail && t.truthTrail.length > 1) {
+      ctx.strokeStyle = color; ctx.globalAlpha = 0.45; ctx.lineWidth = 1.2;
+      ctx.setLineDash([2, 4]);
+      ctx.beginPath();
+      let tfirst = true;
+      for (const p of t.truthTrail) {
+        if (truthRef - p.t > TRAIL_MS) continue;
+        if (tfirst) { ctx.moveTo(sx(p.x), sy(p.y)); tfirst = false; }
+        else ctx.lineTo(sx(p.x), sy(p.y));
+      }
+      ctx.stroke(); ctx.setLineDash([]); ctx.globalAlpha = 1;
+    }
+    if (showTruth && t.truth && truthRef - t.truth.t_ms < 3000) {
+      ctx.strokeStyle = color; ctx.lineWidth = 1.5;
+      ctx.beginPath(); ctx.arc(sx(t.truth.x), sy(t.truth.y), 6, 0, Math.PI * 2); ctx.stroke();
+      if (t.x_m != null && t.state !== "LOST") {  // 誤差ベクトルは推定があるときのみ
+        ctx.globalAlpha = 0.6;
+        ctx.beginPath(); ctx.moveTo(sx(t.truth.x), sy(t.truth.y));
+        ctx.lineTo(sx(t.x_m), sy(t.y_m)); ctx.stroke();
+        ctx.globalAlpha = 1;
+      }
+    }
+    // ---- 以降は位置推定があるタグのみ ----
+    if (t.state === "LOST" || t.x_m == null) continue;
     // 使用アンカーへの接続線
     ctx.strokeStyle = color; ctx.globalAlpha = 0.25; ctx.lineWidth = 1;
     for (const an of (t.used || [])) {
@@ -223,28 +248,6 @@ function draw() {
       else ctx.lineTo(sx(p.x), sy(p.y));
     }
     ctx.stroke(); ctx.globalAlpha = 1;
-    // 真値軌跡 (dev): 点線
-    if (showTruth && t.truthTrail && t.truthTrail.length > 1) {
-      ctx.strokeStyle = color; ctx.globalAlpha = 0.45; ctx.lineWidth = 1.2;
-      ctx.setLineDash([2, 4]);
-      ctx.beginPath();
-      let tfirst = true;
-      for (const p of t.truthTrail) {
-        if (ref - p.t > TRAIL_MS) continue;
-        if (tfirst) { ctx.moveTo(sx(p.x), sy(p.y)); tfirst = false; }
-        else ctx.lineTo(sx(p.x), sy(p.y));
-      }
-      ctx.stroke(); ctx.setLineDash([]); ctx.globalAlpha = 1;
-    }
-    // 真値 (dev): 白抜き丸 + 誤差ベクトル
-    if (showTruth && t.truth && ref - t.truth.t_ms < 3000) {
-      ctx.strokeStyle = color; ctx.lineWidth = 1.5;
-      ctx.beginPath(); ctx.arc(sx(t.truth.x), sy(t.truth.y), 6, 0, Math.PI * 2); ctx.stroke();
-      ctx.globalAlpha = 0.6;
-      ctx.beginPath(); ctx.moveTo(sx(t.truth.x), sy(t.truth.y));
-      ctx.lineTo(sx(t.x_m), sy(t.y_m)); ctx.stroke();
-      ctx.globalAlpha = 1;
-    }
     // 本体マーカー: 残差を輪の半径に反映
     ctx.fillStyle = color;
     ctx.beginPath(); ctx.arc(sx(t.x_m), sy(t.y_m), 6, 0, Math.PI * 2); ctx.fill();
@@ -366,6 +369,7 @@ function onTruth(m) {
   let t = tags.get(m.tag);
   if (!t) { t = { trail: [], errs: [] }; tags.set(m.tag, t); }
   t.truth = { x: m.x_m, y: m.y_m, t_ms: m.t_ms };
+  t.lastTruthTms = m.t_ms;
   t.truthTrail = t.truthTrail || [];
   t.truthTrail.push({ x: m.x_m, y: m.y_m, t: m.t_ms });
   while (t.truthTrail.length > 400) t.truthTrail.shift();
