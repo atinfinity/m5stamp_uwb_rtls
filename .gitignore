@@ -6,3 +6,4 @@ __pycache__/
 .venv/
 logs/
 *.csv
+firmware/test_native/test_rtls_common

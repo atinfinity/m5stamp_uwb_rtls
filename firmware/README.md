@@ -1,4 +1,32 @@
-# ファームウェア(Step 1: DS-TWR 1対1実測)
+# ファームウェア
+
+| 対象 | env | 内容 |
+|---|---|---|
+| `tag`(本番) | `tag` | アンカー巡回 + TDMA + Wi-Fi/MQTT(Step 2/3、Issue [#6](https://github.com/atinfinity/m5stamp_uwb_rtls/issues/6)) |
+| `tag`(計測) | `tag_step1` | 1対1 DS-TWR + CSV 出力(Step 1、Issue [#1](https://github.com/atinfinity/m5stamp_uwb_rtls/issues/1)) |
+| `anchor` | `anchor` | DS-TWR 応答専用 |
+
+Arduino 非依存ロジック(TDMA スロット判定・MQTT ペイロード生成/解析)は `lib/rtls_common/` にあり、
+`./test_native/run.sh` でホスト上の単体テストが実行できる(CI でも実行)。
+
+## 本番モード(env:tag)
+
+Wi-Fi / MQTT / SNTP の接続先は `firmware/tag/platformio.ini` の `build_flags` で指定する
+(`WIFI_SSID` / `WIFI_PASS` / `MQTT_HOST`。SNTP は既定で MQTT_HOST の chrony を使用 — 基本設計 §4.9)。
+
+```bash
+cd firmware/tag
+pio run -e tag -t upload          # 本番モード
+pio run -e tag_step1 -t upload    # Step 1 計測モード
+```
+
+動作: SNTP 同期後、自スロット(アドレスから決まる 90 ms 窓、スーパーフレーム 500 ms)で
+担当アンカー 4 台へ順次 DS-TWR → `rtls/tag/{addr}/ranges` へ publish。
+`rtls/tag/{addr}/anchors`(retained)を受信すると担当リストを差し替える(セルハンドオーバー)。
+
+---
+
+# Step 1: DS-TWR 1対1実測
 
 Issue [#1](https://github.com/atinfinity/m5stamp_uwb_rtls/issues/1) / 設計: [ds-twr-design.md](../docs/ds-twr-design.md) §6
 
@@ -17,9 +45,9 @@ ESP32-C5 の Arduino サポートは pioarduino 版 platform を使用(platformi
 cd firmware/anchor
 pio run -t upload
 
-# タグ (addr 0x0001 → anchor 0x0010 へ 50ms 間隔で測距)
+# タグ 計測モード (addr 0x0001 → anchor 0x0010 へ 50ms 間隔で測距)
 cd ../tag
-pio run -t upload
+pio run -e tag_step1 -t upload
 ```
 
 アドレス・測距間隔は各 `platformio.ini` の `build_flags`(`NODE_ADDR` / `TARGET_ANCHOR` / `RANGE_INTERVAL_MS`)で変更する。
