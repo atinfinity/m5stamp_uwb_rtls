@@ -56,8 +56,12 @@ class RtlsServer:
                     backoff = 1.0
                     log.info("mqtt connected %s:%d", self.config.mqtt.host, self.config.mqtt.port)
                     await client.subscribe("rtls/tag/+/ranges", qos=0)
+                    await client.subscribe("rtls/sim/truth", qos=0)  # 開発モード用 (§9)
                     async for message in client.messages:
-                        await self._on_ranges(bytes(message.payload))
+                        if message.topic.matches("rtls/sim/truth"):
+                            await self._on_truth(bytes(message.payload))
+                        else:
+                            await self._on_ranges(bytes(message.payload))
             except aiomqtt.MqttError as e:
                 self._client = None
                 log.warning("mqtt disconnected (%s); retry in %.0fs", e, backoff)
@@ -90,6 +94,22 @@ class RtlsServer:
         await self.hub.broadcast(json.loads(pos.to_json()) | {"type": "position"})
         await self._maybe_handover(rs.tag, pos.cell)
 
+    async def _on_truth(self, payload: bytes) -> None:
+        """仮想タグの真値 (開発モード) を UI へ転送する。実機運用では流れてこない。"""
+        try:
+            d = json.loads(payload)
+            await self.hub.broadcast(
+                {"type": "truth", "tag": d["tag"], "t_ms": int(d["t_ms"]),
+                 "x_m": float(d["x"]), "y_m": float(d["y"])})
+        except (ValueError, KeyError, json.JSONDecodeError):
+            pass
+
+    async def run_stats_broadcast(self, interval_s: float = 2.0) -> None:
+        """監視統計を WebSocket へ定期配信する (server-design.md §12)。"""
+        while True:
+            await asyncio.sleep(interval_s)
+            await self.hub.broadcast({"type": "stats", **self.monitor.snapshot()})
+
     async def _publish_position(self, pos: Position) -> None:
         if self._client is None:
             return
@@ -119,7 +139,7 @@ async def amain(config_path: str, http_port: int, log_dir: str) -> None:
     uv_config = uvicorn.Config(app, host="0.0.0.0", port=http_port, log_level="warning")
     uv_server = uvicorn.Server(uv_config)
 
-    await asyncio.gather(server.run_mqtt(), uv_server.serve())
+    await asyncio.gather(server.run_mqtt(), server.run_stats_broadcast(), uv_server.serve())
 
 
 def main() -> None:

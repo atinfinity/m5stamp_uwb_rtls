@@ -148,6 +148,19 @@ static void test_pipeline_lost_reacquire() {
     assert(std::hypot(out.x - 20, out.y - 20) < real(0.1));
 }
 
+static void test_pipeline_reboot_seq_reset() {
+    TagPipeline pl(kAnchors, 4, kTagH);
+    for (int i = 0; i < 5; i++) {
+        feedEpoch(pl, 100 + i, 1000 + i * 500, 10, 8);
+    }
+    // 6 秒後に seq=1 で再開 (タグ再起動) → 受理され追尾が続く
+    PosOut out = feedEpoch(pl, 1, 10000, 11, 8);
+    assert(out.valid);
+    assert(std::hypot(out.x - 11, out.y - 8) < real(0.5));
+    // 直後の seq 逆行 (同一 t_ms 帯) は従来どおり破棄
+    assert(!feedEpoch(pl, 1, 10500, 11, 8).valid);
+}
+
 int main() {
     test_solve_exact();
     test_solve_collinear();
@@ -156,6 +169,7 @@ int main() {
     test_pipeline_nlos_removed();
     test_pipeline_coasting_and_dup();
     test_pipeline_lost_reacquire();
+    test_pipeline_reboot_seq_reset();
     printf("all rtls_solver tests passed\n");
     return 0;
 }
