@@ -88,8 +88,10 @@ def create_app(server) -> FastAPI:
 
     @app.post("/api/replay/start")
     async def replay_start(body: dict):
+        truth = body.get("truth") or None
         ok = await server.replay.start(str(body.get("file", "")),
-                                       float(body.get("speed", 1.0)))
+                                       float(body.get("speed", 1.0)),
+                                       truth_name=str(truth) if truth else None)
         return {"ok": ok, **server.replay.status()}
 
     @app.post("/api/replay/pause")

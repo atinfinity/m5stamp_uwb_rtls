@@ -26,6 +26,7 @@ class ReplayController:
         self._pause.set()  # set = 再生中
         self.state = "idle"  # idle / playing / paused / finished
         self.file: str | None = None
+        self.truth_file: str | None = None
         self.speed = 1.0
         self.idx = 0
         self.total = 0
@@ -51,19 +52,32 @@ class ReplayController:
 
     # ---- 操作 ----
 
-    async def start(self, name: str, speed: float) -> bool:
+    async def start(self, name: str, speed: float, truth_name: str | None = None) -> bool:
         path = self._resolve(name)
         if path is None:
             return False
+        # 真値ログ (任意): シミュレータの truth JSONL。誤差ヒートマップ等に使う。
+        truth_map: dict[tuple[str, int], tuple[float, float]] = {}
+        if truth_name:
+            tpath = self._resolve(truth_name)
+            if tpath is None:
+                return False
+            for ln in tpath.read_text().splitlines():
+                try:
+                    d = json.loads(ln)
+                    truth_map[(str(d["tag"]), int(d["t_ms"]))] = (float(d["x"]), float(d["y"]))
+                except (ValueError, KeyError, json.JSONDecodeError):
+                    continue
         await self.stop()
         lines = [ln for ln in path.read_text().splitlines() if ln.strip()]
         self.file = name
+        self.truth_file = truth_name
         self.speed = speed
         self.idx = 0
         self.total = len(lines)
         self.state = "playing"
         self._pause.set()
-        self._task = asyncio.create_task(self._run(lines))
+        self._task = asyncio.create_task(self._run(lines, truth_map))
         await self._broadcast()
         return True
 
@@ -87,20 +101,22 @@ class ReplayController:
             self._task = None
         self.state = "idle"
         self.file = None
+        self.truth_file = None
         self.idx = 0
         self.total = 0
         await self._broadcast()
 
     def status(self) -> dict:
-        return {"state": self.state, "file": self.file, "speed": self.speed,
-                "idx": self.idx, "total": self.total}
+        return {"state": self.state, "file": self.file, "truth_file": self.truth_file,
+                "speed": self.speed, "idx": self.idx, "total": self.total}
 
     async def _broadcast(self) -> None:
         await self._hub.broadcast({"type": "replay", **self.status()})
 
     # ---- 再生本体 ----
 
-    async def _run(self, lines: list[str]) -> None:
+    async def _run(self, lines: list[str],
+                   truth_map: dict[tuple[str, int], tuple[float, float]]) -> None:
         pipelines = build_pipelines(self._config)
         prev_t: int | None = None
         for i, line in enumerate(lines):
@@ -118,6 +134,11 @@ class ReplayController:
             elif i % 50 == 0:
                 await asyncio.sleep(0)  # 最速再生でもイベントループを塞がない
             prev_t = rs.t_ms
+            # 真値は position より先に流す (UI は「最新の真値」と照合するため)
+            t = truth_map.get((str(d["tag"]), rs.t_ms))
+            if t is not None:
+                await self._hub.broadcast({"type": "truth", "tag": str(d["tag"]),
+                                           "t_ms": rs.t_ms, "x_m": t[0], "y_m": t[1]})
             pos = pl.process(rs)
             self.idx = i + 1
             if pos is not None:

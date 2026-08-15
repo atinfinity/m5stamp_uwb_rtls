@@ -18,9 +18,13 @@ class FakeHub:
 
 @pytest.fixture()
 def log_file(config, tmp_path):
-    lines = [json.dumps(m) for m, _ in simulate(config, duration_s=20.0, seed=6)]
+    lines, truths = [], []
+    for m, t in simulate(config, duration_s=20.0, seed=6):
+        lines.append(json.dumps(m))
+        truths.append(json.dumps(t))
     p = tmp_path / "ranges-test.jsonl"
     p.write_text("\n".join(lines) + "\n")
+    (tmp_path / "truth-test.jsonl").write_text("\n".join(truths) + "\n")
     return p
 
 
@@ -28,7 +32,7 @@ def test_list_and_resolve(config, tmp_path, log_file):
     hub = FakeHub()
     rc = ReplayController(config, hub, [tmp_path])
     logs = rc.list_logs()
-    assert [l["name"] for l in logs] == ["ranges-test.jsonl"]
+    assert {l["name"] for l in logs} == {"ranges-test.jsonl", "truth-test.jsonl"}
     # 一覧に無い名前 (パストラバーサル含む) は開始できない
     assert asyncio.run(rc.start("../secrets.jsonl", 0)) is False
     assert asyncio.run(rc.start("unknown.jsonl", 0)) is False
@@ -39,7 +43,8 @@ def test_full_playback_broadcasts_positions(config, tmp_path, log_file):
     rc = ReplayController(config, hub, [tmp_path])
 
     async def run():
-        assert await rc.start("ranges-test.jsonl", speed=0) is True
+        assert await rc.start("ranges-test.jsonl", speed=0,
+                              truth_name="truth-test.jsonl") is True
         for _ in range(200):
             if rc.state == "finished":
                 break
@@ -48,11 +53,26 @@ def test_full_playback_broadcasts_positions(config, tmp_path, log_file):
 
     asyncio.run(run())
     positions = [m for m in hub.messages if m.get("type") == "position"]
+    truths = [m for m in hub.messages if m.get("type") == "truth"]
     statuses = [m for m in hub.messages if m.get("type") == "replay"]
     assert len(positions) > 80                      # 20s × 2Hz × 3タグ ≈ 120 エポック
     assert all(p["src"] == "replay" for p in positions)
+    # 真値ログ指定時は全エポックぶんの truth が流れる (誤差ヒートマップ用)
+    assert len(truths) == rc.total
+    # 各 position の直前に同じ (tag, t_ms) の truth が流れている
+    seen = set()
+    for m in hub.messages:
+        if m.get("type") == "truth":
+            seen.add((m["tag"], m["t_ms"]))
+        elif m.get("type") == "position":
+            assert (m["tag"], m["t_ms"]) in seen
     assert statuses[-1]["state"] == "finished"
     assert rc.idx == rc.total
+
+
+def test_missing_truth_file_rejected(config, tmp_path, log_file):
+    rc = ReplayController(config, FakeHub(), [tmp_path])
+    assert asyncio.run(rc.start("ranges-test.jsonl", 0, truth_name="nope.jsonl")) is False
 
 
 def test_pause_resume_stop(config, tmp_path, log_file):

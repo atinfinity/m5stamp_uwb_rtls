@@ -105,6 +105,7 @@
       <h2>リプレイ</h2>
       <div style="display:flex;gap:0.5rem;align-items:center;flex-wrap:wrap;font-size:0.8rem">
         <select id="replayFile" style="max-width:220px"></select>
+        <select id="replayTruth" style="max-width:180px" title="真値ログ (シミュレータの truth。誤差ヒートマップに必要)"></select>
         <select id="replaySpeed">
           <option value="1">1x</option><option value="2">2x</option>
           <option value="4" selected>4x</option><option value="8">8x</option>
@@ -400,9 +401,11 @@ function onReplayStatus(s) {
 
 async function loadReplayLogs() {
   const logs = await (await fetch("/api/replay/logs")).json();
-  const sel = document.getElementById("replayFile");
-  sel.innerHTML = logs.map((l) =>
+  const opts = logs.map((l) =>
     `<option value="${l.name}">${l.name} (${(l.size / 1024).toFixed(0)}KB)</option>`).join("");
+  document.getElementById("replayFile").innerHTML = opts;
+  document.getElementById("replayTruth").innerHTML =
+    `<option value="">真値なし</option>` + opts;
 }
 
 function setupReplayControls() {
@@ -411,10 +414,11 @@ function setupReplayControls() {
     const file = document.getElementById("replayFile").value;
     if (!file) return;
     const speed = parseFloat(document.getElementById("replaySpeed").value);
+    const truth = document.getElementById("replayTruth").value || null;
     tags.clear(); heat.clear(); draw();  // 画面をリプレイ内容に切り替える
     await fetch("/api/replay/start", { method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ file, speed }) });
+      body: JSON.stringify({ file, speed, truth }) });
   });
   document.getElementById("replayPause").addEventListener("click", async () => {
     const st = (await (await fetch("/api/replay/status")).json()).state;
