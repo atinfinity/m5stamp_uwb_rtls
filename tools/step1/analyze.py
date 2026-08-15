@@ -29,6 +29,7 @@ def percentile(sorted_vals: list[float], p: float) -> float:
 
 def analyze(path: Path) -> None:
     true_dist_m = None
+    mode = None  # DS / SS (FW のヘッダ行 "# tag ... mode=XX" から取得)
     d_mm: list[int] = []
     ex_us_ok: list[int] = []
     errors: Counter[str] = Counter()
@@ -41,6 +42,8 @@ def analyze(path: Path) -> None:
         if line.startswith("#"):
             if "true_dist_m=" in line:
                 true_dist_m = float(line.split("true_dist_m=")[1].split()[0])
+            if "mode=" in line:
+                mode = line.split("mode=")[1].split()[0]
             continue
         parts = line.split(",")
         if len(parts) != 6:
@@ -53,7 +56,7 @@ def analyze(path: Path) -> None:
         else:
             errors[err] += 1
 
-    print(f"== {path} ==")
+    print(f"== {path}{f' (mode={mode}-TWR)' if mode else ''} ==")
     if total == 0:
         print("  データ行がありません")
         return

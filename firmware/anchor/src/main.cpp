@@ -1,6 +1,7 @@
-// アンカー FW (Step 1: DS-TWR 応答専用)
-// 自局アドレス(NODE_ADDR)宛の DS-TWR 要求に応答し続ける。
-// rtls-design.md §4.3 / ds-twr-design.md §3 参照。
+// アンカー FW (応答専用, DS-TWR / SS-TWR 両対応)
+// 自局アドレス(NODE_ADDR)宛の測距要求に応答し続ける。
+// 方式は build env で切替: env:anchor = DS (既定) / env:anchor_ss = SS (-DUSE_SS_TWR)。
+// タグ側と方式を揃えること。rtls-design.md §4.3 / ds-twr-design.md §3 / ss-twr-design.md §3 参照。
 #include <Arduino.h>
 #include <M5Stamp_UWB.h>
 #include <rtls_common.h>
@@ -21,8 +22,13 @@ static void initUwbOrHalt() {
         uwb.hardReset();
         delay(1000);
     }
-    Serial.printf("# anchor addr=0x%04X chip=%s id=0x%08lX\n", (unsigned)NODE_ADDR,
-                  uwb.chipName(), (unsigned long)uwb.deviceId());
+#ifdef USE_SS_TWR
+    const char* mode = "SS";
+#else
+    const char* mode = "DS";
+#endif
+    Serial.printf("# anchor addr=0x%04X mode=%s chip=%s id=0x%08lX\n", (unsigned)NODE_ADDR,
+                  mode, uwb.chipName(), (unsigned long)uwb.deviceId());
 }
 
 void setup() {
@@ -34,8 +40,13 @@ void setup() {
 void loop() {
     // initiatorAddress はワイルドカード的に扱えないため、応答側は自局を
     // responder に設定して待ち受ける。相手 (initiator) は結果から知る。
-    M5Stamp_UWBDSRangeConfig range = rtls::makeDsRangeConfig(rtls::kTagAddrBase, NODE_ADDR);
-    M5Stamp_UWBDSResponderResult res = uwb.respondDSRange(range);
+#ifdef USE_SS_TWR
+    M5Stamp_UWBResponderResult res =
+        uwb.respondRange(rtls::makeSsRangeConfig(rtls::kTagAddrBase, NODE_ADDR));
+#else
+    M5Stamp_UWBDSResponderResult res =
+        uwb.respondDSRange(rtls::makeDsRangeConfig(rtls::kTagAddrBase, NODE_ADDR));
+#endif
     if (res.success) {
         okCount++;
     } else if (res.error != M5Stamp_UWBError::RxTimeout) {
