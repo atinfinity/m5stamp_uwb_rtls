@@ -9,3 +9,4 @@ logs/
 firmware/test_native/test_rtls_common
 firmware/test_native/test_rtls_solver
 firmware/test_native/parity
+firmware/test_native/test_rtls_config
