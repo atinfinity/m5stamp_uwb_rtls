@@ -5,6 +5,7 @@
 | `tag`(本番) | `tag` | アンカー巡回 + TDMA + Wi-Fi/MQTT(Step 2/3、Issue [#6](https://github.com/atinfinity/m5stamp_uwb_rtls/issues/6)) |
 | `tag`(計測) | `tag_step1` | 1対1 DS-TWR + CSV 出力(Step 1、Issue [#1](https://github.com/atinfinity/m5stamp_uwb_rtls/issues/1)) |
 | `anchor` | `anchor` | DS-TWR 応答専用 |
+| `tdoa_poc` | `blink_tx` / `listener` | TDoA PoC: 周期ブリンク送信 / RX タイムスタンプ計測(Issue [#16](https://github.com/atinfinity/m5stamp_uwb_rtls/issues/16)) |
 
 Arduino 非依存ロジック(TDMA スロット判定・MQTT ペイロード生成/解析)は `lib/rtls_common/` にあり、
 `./test_native/run.sh` でホスト上の単体テストが実行できる(CI でも実行)。
@@ -78,6 +79,37 @@ python tools/step1/analyze.py logs/dist*.csv
 - 交換時間 p95 → 基本設計 §4.4 の TDMA スロット幅
 - `rtls_common.h` のタイミング定数(`responseTxDelayUus` を 3000→1500 µs に詰める実験は
   `kDsResponseTxDelayUus` を変更して同手順で比較)
+
+## TDoA PoC(Issue #16、tdoa-design.md §6)
+
+将来方式 TDoA のゲート条件を検証する。公開 API に RX タイムスタンプが無いため、
+listener FW は同梱 `qm33120w_sdk` の `dwt_readrxtimestamp()` を直叩きする
+(40 bit、1 tick ≈ 15.65 ps、~17.2 s で周回)。
+
+**PoC-1(2 ノード): タイムスタンプ取得可否**
+
+```bash
+cd firmware/tdoa_poc
+pio run -e blink_tx -t upload    # ノード1: 100ms 毎にブリンク送信 (addr 0x00F0)
+pio run -e listener -t upload    # ノード2: 受信 + "src,seq,rx_ticks" を CSV 出力
+```
+
+判定: listener の `rx_ticks` がブリンクごとに**単調増加**していれば取得成功
+(増加しない/常に同値なら `receiveFrame()` 実装がレジスタを上書きしており、ライブラリ改造が必要)。
+
+**PoC-2(3 ノード): 2 アンカー無線同期**
+
+blink_tx 1 台 + listener 2 台(それぞれ PC にシリアル接続し CSV を採取)で:
+
+```bash
+uv run python tools/tdoa/sync_analysis.py anchorA.csv anchorB.csv
+# → クロック offset/drift 推定と残留 σ。判定: σ < 2 ns (≈ 60 cm 相当, tdoa-design.md §6-2)
+# タグ模擬の blink_tx (addr を 0x0001 に変更) を追加した場合:
+uv run python tools/tdoa/sync_analysis.py anchorA.csv anchorB.csv --tag-src 0x0001
+```
+
+解析ロジックは `--selftest`(合成クロック)で実機なしで検証済み。
+結果は成立/不成立にかかわらず [tdoa-design.md](../docs/tdoa-design.md) §3 に実測値を記録する。
 
 ## タグ CSV 出力仕様
 
