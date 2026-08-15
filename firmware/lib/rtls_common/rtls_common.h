@@ -48,6 +48,24 @@ inline M5Stamp_UWBConfig makeUwbConfig() {
     return config;
 }
 
+// ---- SS-TWR タイミング (ss-twr-design.md §3, 公式サンプル準拠) ----
+constexpr uint32_t kSsResponseRxAfterTxDelayUus = 500;
+constexpr uint32_t kSsResponseTxDelayUus        = 3000;
+constexpr uint32_t kSsRxTimeoutUus              = 4500;
+constexpr uint32_t kSsHostTimeoutMs             = 100;
+
+inline M5Stamp_UWBRangeConfig makeSsRangeConfig(uint16_t initiator, uint16_t responder) {
+    M5Stamp_UWBRangeConfig range;
+    range.panId                     = kPanId;
+    range.initiatorAddress          = initiator;
+    range.responderAddress          = responder;
+    range.responseRxAfterTxDelayUus = kSsResponseRxAfterTxDelayUus;
+    range.responseTxDelayUus        = kSsResponseTxDelayUus;
+    range.rxTimeoutUus              = kSsRxTimeoutUus;
+    range.hostTimeoutMs             = kSsHostTimeoutMs;
+    return range;
+}
+
 inline M5Stamp_UWBDSRangeConfig makeDsRangeConfig(uint16_t initiator, uint16_t responder) {
     M5Stamp_UWBDSRangeConfig range;
     range.panId                          = kPanId;
