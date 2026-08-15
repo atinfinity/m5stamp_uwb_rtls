@@ -31,11 +31,17 @@ def log_file(config, tmp_path):
 def test_list_and_resolve(config, tmp_path, log_file):
     hub = FakeHub()
     rc = ReplayController(config, hub, [tmp_path])
-    logs = rc.list_logs()
-    assert {l["name"] for l in logs} == {"ranges-test.jsonl", "truth-test.jsonl"}
+    logs = {l["name"]: l["kind"] for l in rc.list_logs()}
+    # 中身で種別が判定される (ファイル名規約に依存しない)
+    assert logs == {"ranges-test.jsonl": "ranges", "truth-test.jsonl": "truth"}
     # 一覧に無い名前 (パストラバーサル含む) は開始できない
     assert asyncio.run(rc.start("../secrets.jsonl", 0)) is False
     assert asyncio.run(rc.start("unknown.jsonl", 0)) is False
+    # 種別の取り違えは拒否: 真値ログを測距ログとして再生できない
+    assert asyncio.run(rc.start("truth-test.jsonl", 0)) is False
+    # 測距ログを真値ログとして指定できない
+    assert asyncio.run(rc.start("ranges-test.jsonl", 0,
+                                truth_name="ranges-test.jsonl")) is False
 
 
 def test_full_playback_broadcasts_positions(config, tmp_path, log_file):

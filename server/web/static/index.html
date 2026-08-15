@@ -103,9 +103,12 @@
     </section>
     <section>
       <h2>リプレイ</h2>
-      <div style="display:flex;gap:0.5rem;align-items:center;flex-wrap:wrap;font-size:0.8rem">
-        <select id="replayFile" style="max-width:220px"></select>
-        <select id="replayTruth" style="max-width:180px" title="真値ログ (シミュレータの truth。誤差ヒートマップに必要)"></select>
+      <div style="display:flex;gap:0.5rem 1rem;align-items:center;flex-wrap:wrap;font-size:0.8rem">
+        <label style="display:inline-flex;align-items:center;gap:0.35rem">測距ログ
+          <select id="replayFile" style="max-width:210px"></select></label>
+        <label style="display:inline-flex;align-items:center;gap:0.35rem">真値ログ (sim)
+          <select id="replayTruth" style="max-width:180px"
+            title="シミュレータ出力の真値。誤差ヒートマップに必要 (実測ログには存在しない)"></select></label>
         <select id="replaySpeed">
           <option value="1">1x</option><option value="2">2x</option>
           <option value="4" selected>4x</option><option value="8">8x</option>
@@ -117,7 +120,8 @@
         <span class="dim" id="replayProgress"></span>
       </div>
       <div class="dim" style="font-size:0.72rem;margin-top:0.3rem">
-        リプレイ中はライブ表示と混ざるため、仮想タグ/実機は止めて使うこと</div>
+        真値ログはシミュレータ出力にのみ存在する(実測ログの場合は「真値なし」のまま —
+        誤差の代わりに残差ヒートマップを使う)。リプレイ中はライブ表示と混ざるため、仮想タグ/実機は止めて使うこと</div>
     </section>
     <section>
       <h2>受信統計</h2>
@@ -401,11 +405,20 @@ function onReplayStatus(s) {
 
 async function loadReplayLogs() {
   const logs = await (await fetch("/api/replay/logs")).json();
-  const opts = logs.map((l) =>
-    `<option value="${l.name}">${l.name} (${(l.size / 1024).toFixed(0)}KB)</option>`).join("");
-  document.getElementById("replayFile").innerHTML = opts;
-  document.getElementById("replayTruth").innerHTML =
-    `<option value="">真値なし</option>` + opts;
+  const opt = (l) =>
+    `<option value="${l.name}">${l.name} (${(l.size / 1024).toFixed(0)}KB)</option>`;
+  // 中身で分類された種別ごとに出し分ける (取り違え防止)
+  document.getElementById("replayFile").innerHTML =
+    logs.filter((l) => l.kind !== "truth").map(opt).join("");
+  const truthLogs = logs.filter((l) => l.kind === "truth");
+  const truthSel = document.getElementById("replayTruth");
+  if (truthLogs.length) {
+    truthSel.innerHTML = `<option value="">真値なし</option>` + truthLogs.map(opt).join("");
+    truthSel.disabled = false;
+  } else {
+    truthSel.innerHTML = `<option value="">真値ログなし (実測ログには真値は存在しない)</option>`;
+    truthSel.disabled = true;
+  }
 }
 
 async function setupReplayControls() {

@@ -37,6 +37,34 @@ class ReplayController:
 
     # ---- ログ一覧 / 解決 (パストラバーサル防止のため一覧内のみ許可) ----
 
+    @staticmethod
+    def _classify(path: Path) -> str:
+        """先頭行の中身でログ種別を判定する: 'ranges' / 'truth' / 'unknown'。
+
+        ファイル名規約に頼らないため、recorder の実測ログ・シミュレータ出力の
+        どちらも正しく分類される (真値ログは実測では存在しない)。
+        """
+        try:
+            with path.open() as f:
+                for _ in range(3):
+                    line = f.readline()
+                    if not line:
+                        break
+                    line = line.strip()
+                    if not line:
+                        continue
+                    d = json.loads(line)
+                    if "meta" in d:
+                        continue  # シミュレータのメタ行はスキップして次行で判定
+                    if "ranges" in d:
+                        return "ranges"
+                    if {"tag", "t_ms", "x", "y"} <= set(d):
+                        return "truth"
+                    return "unknown"
+        except (OSError, ValueError, json.JSONDecodeError):
+            pass
+        return "unknown"
+
     def list_logs(self) -> list[dict]:
         out = []
         for d in self._dirs:
@@ -44,26 +72,29 @@ class ReplayController:
                 continue
             for p in sorted(d.glob("*.jsonl")):
                 out.append({"name": p.name, "dir": str(d),
+                            "kind": self._classify(p),
                             "size": p.stat().st_size,
                             "mtime": int(p.stat().st_mtime)})
         return out
 
-    def _resolve(self, name: str) -> Path | None:
+    def _resolve(self, name: str, kinds: tuple[str, ...]) -> Path | None:
+        """一覧内かつ指定種別のファイルのみ解決する (取り違え・トラバーサル防止)。"""
         for entry in self.list_logs():
-            if entry["name"] == name:
+            if entry["name"] == name and entry["kind"] in kinds:
                 return Path(entry["dir"]) / name
         return None
 
     # ---- 操作 ----
 
     async def start(self, name: str, speed: float, truth_name: str | None = None) -> bool:
-        path = self._resolve(name)
+        path = self._resolve(name, kinds=("ranges", "unknown"))
         if path is None:
             return False
         # 真値ログ (任意): シミュレータの truth JSONL。誤差ヒートマップ等に使う。
+        # 真値として使えるのは kind=truth のファイルのみ (測距ログの誤選択を拒否)。
         truth_map: dict[tuple[str, int], tuple[float, float]] = {}
         if truth_name:
-            tpath = self._resolve(truth_name)
+            tpath = self._resolve(truth_name, kinds=("truth",))
             if tpath is None:
                 return False
             for ln in tpath.read_text().splitlines():
