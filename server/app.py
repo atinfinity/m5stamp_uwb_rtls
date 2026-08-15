@@ -44,7 +44,9 @@ class RtlsServer:
         self.hub = Hub()
         self.latest: dict[int, Position] = {}
         self.sim_obstacles: list[list[float]] = []  # 開発モード: シミュレータの遮蔽物
-        self.replay = ReplayController(config, self.hub, [log_dir])
+        self.replay = ReplayController(
+            config, self.hub, [log_dir],
+            obstacles_sink=lambda obs: setattr(self, "sim_obstacles", obs))
         self._published_cell: dict[int, str] = {}
         self._client: aiomqtt.Client | None = None
 

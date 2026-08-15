@@ -17,10 +17,14 @@ from server.replay import build_pipelines
 
 
 class ReplayController:
-    def __init__(self, config: RtlsConfig, hub, log_dirs: list[str | Path]) -> None:
+    def __init__(self, config: RtlsConfig, hub, log_dirs: list[str | Path],
+                 obstacles_sink=None) -> None:
         self._config = config
         self._hub = hub
         self._dirs = [Path(d) for d in log_dirs]
+        # 遮蔽壁をサーバー状態 (/api/floor) にも反映するためのコールバック。
+        # WS 配信だけだとページリロードで壁が消える。
+        self._obstacles_sink = obstacles_sink
         self._task: asyncio.Task | None = None
         self._pause = asyncio.Event()
         self._pause.set()  # set = 再生中
@@ -129,6 +133,8 @@ class ReplayController:
                                  for r in meta.get("obstacles", []) if len(r) == 4]
             except (ValueError, AttributeError, json.JSONDecodeError):
                 pass
+        if self._obstacles_sink is not None:
+            self._obstacles_sink(obstacles)
         await self._hub.broadcast({"type": "obstacles", "obstacles": obstacles})
         prev_t: int | None = None
         for i, line in enumerate(lines):

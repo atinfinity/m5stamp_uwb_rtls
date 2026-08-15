@@ -408,8 +408,10 @@ async function loadReplayLogs() {
     `<option value="">真値なし</option>` + opts;
 }
 
-function setupReplayControls() {
+async function setupReplayControls() {
   loadReplayLogs();
+  // リロード後もサーバー側で再生が続いていればバッジ・進捗を復元する
+  onReplayStatus(await (await fetch("/api/replay/status")).json());
   document.getElementById("replayPlay").addEventListener("click", async () => {
     const file = document.getElementById("replayFile").value;
     if (!file) return;
