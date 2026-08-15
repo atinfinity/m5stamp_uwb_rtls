@@ -166,7 +166,6 @@ function anchorFailRate(name) {
 function draw() {
   if (!floor) return;
   ctx.clearRect(0, 0, canvas.width, canvas.height);
-  const now = Date.now();
   // セル境界
   ctx.strokeStyle = "#2A3538"; ctx.lineWidth = 1;
   for (const c of Object.values(floor.cells)) {
@@ -193,6 +192,9 @@ function draw() {
   for (const [name, t] of tags) {
     if (t.state === "LOST" || t.x_m == null) continue;
     const color = colorOf(name);
+    // 寿命判定はデータ時刻 (t_ms) 基準: リプレイの一時停止中は時間が進まず
+    // 軌跡が凍結され、再生速度によらず「データ 30 秒ぶん」が表示される
+    const ref = t.lastTms || 0;
     // 使用アンカーへの接続線
     ctx.strokeStyle = color; ctx.globalAlpha = 0.25; ctx.lineWidth = 1;
     for (const an of (t.used || [])) {
@@ -201,8 +203,8 @@ function draw() {
       ctx.beginPath(); ctx.moveTo(sx(t.x_m), sy(t.y_m)); ctx.lineTo(sx(a.x), sy(a.y)); ctx.stroke();
     }
     ctx.globalAlpha = 1;
-    // 棄却アンカー (2 秒間だけ赤破線)
-    if (t.rejectedAt && now - t.rejectedAt < REJECT_FLASH_MS) {
+    // 棄却アンカー (データ時刻で 2 秒間だけ赤破線)
+    if (t.rejectedAtTms && ref - t.rejectedAtTms < REJECT_FLASH_MS) {
       ctx.strokeStyle = "#E08886"; ctx.setLineDash([4, 4]); ctx.lineWidth = 1.5;
       for (const an of t.rejected || []) {
         const a = floor.anchors[an];
@@ -216,7 +218,7 @@ function draw() {
     ctx.beginPath();
     let first = true;
     for (const p of t.trail) {
-      if (now - p.at > TRAIL_MS) continue;
+      if (ref - p.t > TRAIL_MS) continue;
       if (first) { ctx.moveTo(sx(p.x), sy(p.y)); first = false; }
       else ctx.lineTo(sx(p.x), sy(p.y));
     }
@@ -228,14 +230,14 @@ function draw() {
       ctx.beginPath();
       let tfirst = true;
       for (const p of t.truthTrail) {
-        if (now - p.at > TRAIL_MS) continue;
+        if (ref - p.t > TRAIL_MS) continue;
         if (tfirst) { ctx.moveTo(sx(p.x), sy(p.y)); tfirst = false; }
         else ctx.lineTo(sx(p.x), sy(p.y));
       }
       ctx.stroke(); ctx.setLineDash([]); ctx.globalAlpha = 1;
     }
     // 真値 (dev): 白抜き丸 + 誤差ベクトル
-    if (showTruth && t.truth && now - t.truth.at < 3000) {
+    if (showTruth && t.truth && ref - t.truth.t_ms < 3000) {
       ctx.strokeStyle = color; ctx.lineWidth = 1.5;
       ctx.beginPath(); ctx.arc(sx(t.truth.x), sy(t.truth.y), 6, 0, Math.PI * 2); ctx.stroke();
       ctx.globalAlpha = 0.6;
@@ -337,11 +339,12 @@ function onPosition(m) {
     n_used: m.quality ? m.quality.n_anchors : 0,
     used: m.anchors_used || [],
   });
+  t.lastTms = m.t_ms;
   if ((m.anchors_rejected || []).length) {
     t.rejected = m.anchors_rejected;
-    t.rejectedAt = Date.now();
+    t.rejectedAtTms = m.t_ms;
   }
-  t.trail.push({ x: m.x_m, y: m.y_m, at: Date.now() });
+  t.trail.push({ x: m.x_m, y: m.y_m, t: m.t_ms });
   while (t.trail.length > 400) t.trail.shift();
   // 真値との誤差 (時刻が近いときのみ)
   let err = null;
@@ -362,9 +365,9 @@ function onTruth(m) {
   }
   let t = tags.get(m.tag);
   if (!t) { t = { trail: [], errs: [] }; tags.set(m.tag, t); }
-  t.truth = { x: m.x_m, y: m.y_m, t_ms: m.t_ms, at: Date.now() };
+  t.truth = { x: m.x_m, y: m.y_m, t_ms: m.t_ms };
   t.truthTrail = t.truthTrail || [];
-  t.truthTrail.push({ x: m.x_m, y: m.y_m, at: Date.now() });
+  t.truthTrail.push({ x: m.x_m, y: m.y_m, t: m.t_ms });
   while (t.truthTrail.length > 400) t.truthTrail.shift();
 }
 
