@@ -42,6 +42,7 @@ class RtlsServer:
         self.monitor = Monitor()
         self.hub = Hub()
         self.latest: dict[int, Position] = {}
+        self.sim_obstacles: list[list[float]] = []  # 開発モード: シミュレータの遮蔽物
         self._published_cell: dict[int, str] = {}
         self._client: aiomqtt.Client | None = None
 
@@ -56,10 +57,13 @@ class RtlsServer:
                     backoff = 1.0
                     log.info("mqtt connected %s:%d", self.config.mqtt.host, self.config.mqtt.port)
                     await client.subscribe("rtls/tag/+/ranges", qos=0)
-                    await client.subscribe("rtls/sim/truth", qos=0)  # 開発モード用 (§9)
+                    await client.subscribe("rtls/sim/truth", qos=0)      # 開発モード用 (§9)
+                    await client.subscribe("rtls/sim/obstacles", qos=1)  # 〃 (retained)
                     async for message in client.messages:
                         if message.topic.matches("rtls/sim/truth"):
                             await self._on_truth(bytes(message.payload))
+                        elif message.topic.matches("rtls/sim/obstacles"):
+                            await self._on_obstacles(bytes(message.payload))
                         else:
                             await self._on_ranges(bytes(message.payload))
             except aiomqtt.MqttError as e:
@@ -102,6 +106,16 @@ class RtlsServer:
                 {"type": "truth", "tag": d["tag"], "t_ms": int(d["t_ms"]),
                  "x_m": float(d["x"]), "y_m": float(d["y"])})
         except (ValueError, KeyError, json.JSONDecodeError):
+            pass
+
+    async def _on_obstacles(self, payload: bytes) -> None:
+        """シミュレータの遮蔽物定義 (開発モード) を保持し UI へ転送する。"""
+        try:
+            d = json.loads(payload)
+            self.sim_obstacles = [[float(v) for v in r] for r in d.get("obstacles", [])
+                                  if len(r) == 4]
+            await self.hub.broadcast({"type": "obstacles", "obstacles": self.sim_obstacles})
+        except (ValueError, TypeError, json.JSONDecodeError):
             pass
 
     async def run_stats_broadcast(self, interval_s: float = 2.0) -> None:

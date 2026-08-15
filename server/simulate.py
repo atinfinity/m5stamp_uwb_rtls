@@ -18,12 +18,17 @@ class SimParams:
     rate_hz: float = 2.0
     speed_ms: float = 1.2            # 歩行速度
     sigma_m: float = 0.05            # 測距ガウスノイズ σ
-    nlos_prob: float = 0.05          # NLoS バイアス混入率
+    nlos_prob: float = 0.05          # ランダム NLoS バイアス混入率 (見通し測距にも確率的に発生)
     nlos_bias_m: tuple[float, float] = (0.3, 2.0)  # 伸びる方向の一様分布
     dropout_prob: float = 0.03       # 欠測率 (ok=false)
     recv_jitter_ms: tuple[int, int] = (5, 40)      # Wi-Fi+ブローカー遅延
     start_t_ms: int = 1_000_000
     margin_m: float = 2.0            # 壁からの距離
+    # 空間 NLoS モデル (Issue #21): 遮蔽物矩形 (x0,y0,x1,y1) のリスト。
+    # タグ→アンカーの見通し線が矩形を横切る測距は毎エポック NLoS バイアスが乗り、
+    # 欠測率も obstacle_dropout_prob へ上がる (恒常的な遮蔽の模擬)。
+    obstacles: tuple[tuple[float, float, float, float], ...] = ()
+    obstacle_dropout_prob: float = 0.10
 
 
 @dataclass
@@ -33,6 +38,34 @@ class _TagState:
     wx: float = 0.0
     wy: float = 0.0
     seq: int = 0
+
+
+def segment_intersects_rect(p1: tuple[float, float], p2: tuple[float, float],
+                            rect: tuple[float, float, float, float]) -> bool:
+    """線分 p1-p2 が軸平行矩形 (x0,y0,x1,y1) と交わるか (Liang-Barsky クリッピング)。"""
+    x0, y0, x1, y1 = rect
+    dx, dy = p2[0] - p1[0], p2[1] - p1[1]
+    t_min, t_max = 0.0, 1.0
+    for p, q in ((-dx, p1[0] - x0), (dx, x1 - p1[0]),
+                 (-dy, p1[1] - y0), (dy, y1 - p1[1])):
+        if p == 0:
+            if q < 0:
+                return False  # 平行かつ矩形の外側
+            continue
+        t = q / p
+        if p < 0:
+            t_min = max(t_min, t)
+        else:
+            t_max = min(t_max, t)
+        if t_min > t_max:
+            return False
+    return True
+
+
+def is_blocked(params: SimParams, tag_xy: tuple[float, float],
+               anchor_xy: tuple[float, float]) -> bool:
+    """タグ→アンカーの見通し線がいずれかの遮蔽物に遮られるか。"""
+    return any(segment_intersects_rect(tag_xy, anchor_xy, r) for r in params.obstacles)
 
 
 def _cell_anchors(config: RtlsConfig, x: float, y: float) -> list[int]:
@@ -105,7 +138,9 @@ def simulate(
             ranges = []
             for addr in _cell_anchors(config, st.x, st.y):
                 a = anchors[addr]
-                if rng.random() < p.dropout_prob:
+                blocked = is_blocked(p, (st.x, st.y), (a.x, a.y))
+                dropout = p.obstacle_dropout_prob if blocked else p.dropout_prob
+                if rng.random() < dropout:
                     ranges.append({"a": f"0x{addr:04X}", "d_mm": 0, "ok": False})
                     continue
                 slant = math.sqrt(
@@ -113,8 +148,9 @@ def simulate(
                     + (a.z - floor.tag_height_m) ** 2
                 )
                 d = slant + rng.gauss(0.0, p.sigma_m)
-                if rng.random() < p.nlos_prob:
-                    d += rng.uniform(*p.nlos_bias_m)  # NLoS は伸びる方向のみ
+                # 遮蔽されている経路は毎エポック、見通し経路は確率的に NLoS (伸びる方向のみ)
+                if blocked or rng.random() < p.nlos_prob:
+                    d += rng.uniform(*p.nlos_bias_m)
                 d_mm = int(round(d * 1000)) + a.bias_mm
                 ranges.append({"a": f"0x{addr:04X}", "d_mm": d_mm, "ok": True})
 

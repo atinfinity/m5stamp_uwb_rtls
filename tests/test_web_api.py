@@ -103,6 +103,24 @@ def test_stats_broadcast(server, config):
     assert stats_msgs[0]["tags"]["0x0001"]["received"] == 1
 
 
+def test_obstacles_forwarding(server, client):
+    received = []
+
+    class FakeWs:
+        async def send_json(self, m):
+            received.append(m)
+
+    async def run():
+        await server.hub.add(FakeWs())
+        await server._on_obstacles(json.dumps({"obstacles": [[24, 15, 26, 35]]}).encode())
+        await server._on_obstacles(b"broken")  # 不正データは無視される
+
+    asyncio.run(run())
+    assert received == [{"type": "obstacles", "obstacles": [[24.0, 15.0, 26.0, 35.0]]}]
+    # /api/floor にも反映される (UI 初期化用)
+    assert client.get("/api/floor").json()["sim_obstacles"] == [[24.0, 15.0, 26.0, 35.0]]
+
+
 def test_websocket_connects(client):
     with client.websocket_connect("/ws") as ws:
         ws.send_text("ping")  # keepalive 経路が例外なく通ること
