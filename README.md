@@ -4,6 +4,9 @@
 
 M5Stack Stamp UWB (Qorvo QM33120W) + Stamp C5 による屋内 2D RTLS(リアルタイム測位システム)。
 
+> [!NOTE]
+> 本プロジェクトは**非公式の個人プロジェクト**です。M5Stack 社・Qorvo 社およびその関連企業とは一切関係ありません。
+
 ![RTLS フロアマップ UI(仮想タグによるライブ動作)](docs/assets/rtls-ui.gif)
 
 *可視化 UI の動作例(実機レス: 仮想タグ + シミュレータ)。**●** = 測位結果(実線 = 推定軌跡)、**○** = 真値 GT(点線 = 真値軌跡、開発モード)、細実線 = 解算に使用した測距、**赤破線** = 外れ値除去/ゲートで棄却された測距(NLoS)。右側は監視パネル(アンカー別欠測率・受信統計)。凡例は画面下部に常時表示される。*
@@ -13,6 +16,7 @@ M5Stack Stamp UWB (Qorvo QM33120W) + Stamp C5 による屋内 2D RTLS(リアル�
   - 測距方式: [DS-TWR](docs/ds-twr-design.md)(採用)/ [SS-TWR](docs/ss-twr-design.md)(予備)/ [TDoA](docs/tdoa-design.md)(将来)
 - ファームウェア: [firmware/](firmware/)(Step 1: DS-TWR 1対1計測 — Issue #1)
 - 測位サーバー: [server/](server/)(実機レスで開発可能 — Issue #3)
+- 開発ガイド: [環境構築](docs/development.md) / [構成カスタマイズ(アンカー・タグ)](docs/configuration.md) / [測位アルゴリズム開発](docs/algorithm-guide.md) / [アプリケーション開発](docs/application-guide.md)([examples/](examples/) にサンプルあり)
 
 ## クイックスタート(実機不要)
 
