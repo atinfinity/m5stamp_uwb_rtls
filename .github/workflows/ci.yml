@@ -16,6 +16,14 @@ jobs:
       - name: Test
         run: uv run pytest -q
 
+  firmware-native:
+    # rtls_common (スロット判定・JSON 生成/解析) のホストテスト — 実機・ツールチェーン不要
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run native tests
+        run: ./firmware/test_native/run.sh
+
   firmware:
     # 実機レス期間の FW ビルドチェック (pio run はコンパイルのみ)。
     # ESP32-C5 の pioarduino board 定義は実機未検証のため、当面は失敗を
