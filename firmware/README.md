@@ -145,3 +145,10 @@ seq,ok,d_mm,elapsed_ms,exchange_us,err
 - `exchange_us`: `requestDSRange()` 呼出し全体の実測時間(ホスト SPI 処理込み)。スロット設計はこちらを使う
 - `elapsed_ms`: ライブラリが報告する所要時間
 - `#` で始まる行はメタデータ/サマリ
+
+## 実測レポートテンプレート
+
+各検証の記録様式は [docs/reports/](../docs/reports/) にある(コピーして記入):
+[Step 1 DS-TWR](../docs/reports/step1-ds-twr-report.md) /
+[SS-TWR 対照](../docs/reports/ss-twr-report.md) /
+[TDoA PoC](../docs/reports/tdoa-poc-report.md)
