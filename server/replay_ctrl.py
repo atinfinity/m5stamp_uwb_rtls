@@ -118,6 +118,18 @@ class ReplayController:
     async def _run(self, lines: list[str],
                    truth_map: dict[tuple[str, int], tuple[float, float]]) -> None:
         pipelines = build_pipelines(self._config)
+        # 先頭のメタデータ行 (シミュレータが埋め込む遮蔽壁など) を反映する。
+        # メタが無いログでは空を流し、前セッションの壁が画面に残らないようにする。
+        obstacles: list[list[float]] = []
+        if lines:
+            try:
+                meta = json.loads(lines[0]).get("meta")
+                if meta:
+                    obstacles = [[float(v) for v in r]
+                                 for r in meta.get("obstacles", []) if len(r) == 4]
+            except (ValueError, AttributeError, json.JSONDecodeError):
+                pass
+        await self._hub.broadcast({"type": "obstacles", "obstacles": obstacles})
         prev_t: int | None = None
         for i, line in enumerate(lines):
             await self._pause.wait()

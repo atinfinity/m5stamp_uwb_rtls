@@ -48,6 +48,9 @@ def main() -> int:
 
     n = 0
     with out.open("w") as fo, truth_path.open("w") as ft:
+        if obstacles:
+            # リプレイ時に遮蔽壁を復元・描画できるようメタデータ行を先頭に書く
+            fo.write(json.dumps({"meta": {"obstacles": [list(o) for o in obstacles]}}) + "\n")
         for msg, truth in simulate(config, args.duration_s, args.seed, params):
             fo.write(json.dumps(msg) + "\n")
             ft.write(json.dumps(truth) + "\n")

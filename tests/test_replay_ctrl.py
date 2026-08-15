@@ -70,6 +70,33 @@ def test_full_playback_broadcasts_positions(config, tmp_path, log_file):
     assert rc.idx == rc.total
 
 
+def test_obstacle_meta_broadcast(config, tmp_path):
+    """メタ行付きログの再生で遮蔽壁が配信され、メタ無しでは空で上書きされる。"""
+    lines = [json.dumps({"meta": {"obstacles": [[24, 15, 26, 35]]}})]
+    lines += [json.dumps(m) for m, _ in simulate(config, duration_s=5.0, seed=2)]
+    (tmp_path / "with-meta.jsonl").write_text("\n".join(lines) + "\n")
+    (tmp_path / "no-meta.jsonl").write_text(lines[1] + "\n")
+
+    hub = FakeHub()
+    rc = ReplayController(config, hub, [tmp_path])
+
+    async def run(name):
+        await rc.start(name, speed=0)
+        for _ in range(100):
+            if rc.state == "finished":
+                break
+            await asyncio.sleep(0.05)
+
+    asyncio.run(run("with-meta.jsonl"))
+    obs = [m for m in hub.messages if m.get("type") == "obstacles"]
+    assert obs[-1]["obstacles"] == [[24.0, 15.0, 26.0, 35.0]]
+
+    hub.messages.clear()
+    asyncio.run(run("no-meta.jsonl"))
+    obs = [m for m in hub.messages if m.get("type") == "obstacles"]
+    assert obs[-1]["obstacles"] == []  # 前セッションの壁を消す
+
+
 def test_missing_truth_file_rejected(config, tmp_path, log_file):
     rc = ReplayController(config, FakeHub(), [tmp_path])
     assert asyncio.run(rc.start("ranges-test.jsonl", 0, truth_name="nope.jsonl")) is False
