@@ -130,9 +130,12 @@ class RtlsServer:
             log.info("handover tag=0x%04X -> cell %s", tag, cell)
 
 
-async def amain(config_path: str, http_port: int, log_dir: str) -> None:
+async def amain(config_path: str, http_port: int, log_dir: str,
+                mqtt_host: str | None = None) -> None:
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
     config = load_config(config_path)
+    if mqtt_host:  # コンテナ等で config を書き換えずにブローカー先だけ差し替える
+        config.mqtt.host = mqtt_host
     server = RtlsServer(config, log_dir)
 
     app = create_app(server)
@@ -147,8 +150,10 @@ def main() -> None:
     ap.add_argument("--config", default="server/config.yaml")
     ap.add_argument("--http-port", type=int, default=8000)
     ap.add_argument("--log-dir", default="logs")
+    ap.add_argument("--mqtt-host", default=None,
+                    help="config.yaml の mqtt.host を上書き (Docker 等での接続先差し替え用)")
     args = ap.parse_args()
-    asyncio.run(amain(args.config, args.http_port, args.log_dir))
+    asyncio.run(amain(args.config, args.http_port, args.log_dir, args.mqtt_host))
 
 
 if __name__ == "__main__":
