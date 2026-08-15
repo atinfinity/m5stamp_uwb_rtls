@@ -53,9 +53,11 @@ void loop() {
         return;  // ブリンク以外のフレーム (測距等) は無視
     }
 
-    // ★受信直後にタイムスタンプを読む (次の receiveFrame 呼出し前)
+    // ★受信直後にタイムスタンプを読む (次の receiveFrame 呼出し前)。
+    //   第 2 引数はセグメント選択: QM33xxx/DW3XXX の dwt_uwb_driver では
+    //   DWT_COMPAT_NONE を渡す (deca_device_api.h のコメントに明記)。
     uint8_t ts[5];
-    dwt_readrxtimestamp(ts);
+    dwt_readrxtimestamp(ts, DWT_COMPAT_NONE);
     uint64_t ticks = 0;
     for (int i = 4; i >= 0; i--) {
         ticks = (ticks << 8) | ts[i];  // 5 byte little-endian → uint64
