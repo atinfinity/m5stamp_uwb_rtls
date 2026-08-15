@@ -35,6 +35,13 @@
   .LOST { color: var(--ng); }
   .warnbg { color: var(--ng); font-weight: 700; }
   .dim { color: var(--muted); }
+  #maparea { display: flex; flex-direction: column; gap: 0.5rem; }
+  #legend { display: flex; flex-wrap: wrap; gap: 0.4rem 1.3rem; font-size: 0.75rem;
+            color: var(--muted); padding: 0.1rem 0.2rem; align-items: center; }
+  #legend .item { display: inline-flex; align-items: center; gap: 0.45rem; }
+  #legend svg { display: block; }
+  #legend .truth-item { display: none; }
+  #legend .truth-item.available { display: inline-flex; }
 </style>
 </head>
 <body>
@@ -44,7 +51,17 @@
   <label class="toggle" id="truthToggle"><input type="checkbox" id="showTruth" checked>真値表示 (dev)</label>
 </header>
 <main>
-  <canvas id="map" width="620" height="620"></canvas>
+  <div id="maparea">
+    <canvas id="map" width="620" height="620"></canvas>
+    <div id="legend">
+      <span class="item"><svg width="16" height="14"><circle cx="8" cy="7" r="6" fill="#4FC3CF"/></svg>測位結果(+軌跡)</span>
+      <span class="item truth-item" id="legendTruth"><svg width="16" height="14"><circle cx="8" cy="7" r="5.5" fill="none" stroke="#4FC3CF" stroke-width="1.5"/></svg>真値 GT (dev)</span>
+      <span class="item"><svg width="24" height="14"><line x1="1" y1="7" x2="23" y2="7" stroke="#4FC3CF" stroke-width="1.5" opacity="0.5"/></svg>使用した測距</span>
+      <span class="item"><svg width="24" height="14"><line x1="1" y1="7" x2="23" y2="7" stroke="#E08886" stroke-width="1.8" stroke-dasharray="4 4"/></svg>棄却された測距 (NLoS/ゲート)</span>
+      <span class="item"><svg width="16" height="14"><circle cx="8" cy="7" r="4.5" fill="#93A4A8"/></svg>アンカー</span>
+      <span class="item"><svg width="16" height="14"><circle cx="8" cy="7" r="4.5" fill="#E08886"/></svg>アンカー (欠測率&gt;30%)</span>
+    </div>
+  </div>
   <aside>
     <section>
       <h2>タグ</h2>
@@ -228,6 +245,7 @@ function onTruth(m) {
   if (!truthSeen) {
     truthSeen = true;
     document.getElementById("truthToggle").classList.add("available");
+    document.getElementById("legendTruth").classList.add("available");
   }
   let t = tags.get(m.tag);
   if (!t) { t = { trail: [], errs: [] }; tags.set(m.tag, t); }

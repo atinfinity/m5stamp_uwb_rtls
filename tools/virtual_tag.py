@@ -41,12 +41,14 @@ async def run(config_path: str, rate_hz: float, duration_s: float,
             msg.pop("recv_ms", None)
             now_ms = int(time.time() * 1000)
             msg["t_ms"] = now_ms
-            topic = f"rtls/tag/{msg['tag']}/ranges"
-            await client.publish(topic, json.dumps(msg), qos=0)
+            # 真値を先に publish する: UI は position 受信時に最新の真値と照合する
+            # ため、後から送ると 1 エポック前の真値と突き合わされて誤差が水増しされる
             if publish_truth:
                 t = dict(truth)
                 t["t_ms"] = now_ms
                 await client.publish("rtls/sim/truth", json.dumps(t), qos=0)
+            topic = f"rtls/tag/{msg['tag']}/ranges"
+            await client.publish(topic, json.dumps(msg), qos=0)
             sent += 1
             if sent % (n_tags * int(rate_hz) * 10 or 1) == 0:
                 print(f"sent {sent} epochs")
