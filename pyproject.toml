@@ -19,7 +19,7 @@ mqtt = ["aiomqtt>=2.0"]
 web = ["fastapi>=0.110", "uvicorn>=0.29"]
 
 [dependency-groups]
-dev = ["pytest>=8.0"]
+dev = ["pytest>=8.0", "httpx2"]
 
 [tool.setuptools.packages.find]
 include = ["server*"]

@@ -67,6 +67,8 @@ class Position:
     residual_m: float  # 使用距離の RMS 残差
     cell: str
     state: TagTrackState
+    used: tuple[int, ...] = ()      # 解算に使ったアンカー
+    rejected: tuple[int, ...] = ()  # ゲート/外れ値除去で棄却したアンカー
 
     def to_json(self) -> str:
         return json.dumps(
@@ -78,6 +80,8 @@ class Position:
                 "vx_ms": round(self.vx_ms, 3),
                 "vy_ms": round(self.vy_ms, 3),
                 "quality": {"n_anchors": self.n_used, "residual_m": round(self.residual_m, 3)},
+                "anchors_used": [f"0x{a:04X}" for a in self.used],
+                "anchors_rejected": [f"0x{a:04X}" for a in self.rejected],
                 "cell": self.cell,
                 "state": self.state.name,
             }

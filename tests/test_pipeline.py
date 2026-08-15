@@ -51,6 +51,8 @@ def test_nlos_outlier_removed(config):
     assert pos.state is TagTrackState.TRACKING
     assert math.hypot(pos.x_m - 10.0, pos.y_m - 8.0) < 0.30
     assert pos.n_used == 3  # 汚染距離が除外されている
+    assert 0x0010 in pos.rejected and 0x0010 not in pos.used
+    assert len(pos.used) == 3
 
 
 def test_coasting_on_missing_epoch(config):

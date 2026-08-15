@@ -6,77 +6,141 @@
 <title>RTLS Floor Map</title>
 <style>
   :root {
-    --bg: #10171A; --surface: #172023; --text: #E2E9EA; --muted: #93A4A8;
-    --accent: #4FC3CF; --border: #2A3538; --warn: #E5C67E; --ok: #6FCF8E;
+    --bg: #10171A; --surface: #172023; --surface-2: #1E292D; --text: #E2E9EA;
+    --muted: #93A4A8; --accent: #4FC3CF; --border: #2A3538;
+    --warn: #E5C67E; --ok: #6FCF8E; --ng: #E08886;
   }
   * { box-sizing: border-box; }
   body { margin: 0; background: var(--bg); color: var(--text);
-         font-family: "Hiragino Sans", "Yu Gothic", sans-serif; }
-  header { padding: 0.8rem 1.2rem; border-bottom: 1px solid var(--border);
-           display: flex; gap: 1.5rem; align-items: baseline; }
+         font-family: "Hiragino Sans", "Yu Gothic", sans-serif; font-size: 14px; }
+  header { padding: 0.7rem 1.2rem; border-bottom: 1px solid var(--border);
+           display: flex; gap: 1.4rem; align-items: center; flex-wrap: wrap; }
   h1 { font-size: 1rem; margin: 0; color: var(--accent); }
   #status { font-size: 0.8rem; color: var(--muted); }
-  main { display: flex; gap: 1rem; padding: 1rem; flex-wrap: wrap; }
+  label.toggle { font-size: 0.8rem; color: var(--muted); display: none; align-items: center; gap: 0.3rem; }
+  label.toggle.available { display: inline-flex; }
+  main { display: flex; gap: 1rem; padding: 1rem; flex-wrap: wrap; align-items: flex-start; }
   canvas { background: var(--surface); border: 1px solid var(--border); border-radius: 6px; }
-  #tags { font-size: 0.8rem; min-width: 260px; }
-  table { border-collapse: collapse; width: 100%; }
-  td, th { padding: 0.3rem 0.6rem; border-bottom: 1px solid var(--border); text-align: left; }
+  aside { flex: 1; min-width: 340px; display: flex; flex-direction: column; gap: 1rem; }
+  section { background: var(--surface); border: 1px solid var(--border); border-radius: 6px;
+            padding: 0.7rem 0.9rem; }
+  section h2 { font-size: 0.75rem; letter-spacing: 0.1em; color: var(--muted);
+               margin: 0 0 0.5rem; font-weight: 700; }
+  table { border-collapse: collapse; width: 100%; font-size: 0.78rem;
+          font-variant-numeric: tabular-nums; }
+  td, th { padding: 0.25rem 0.5rem; border-bottom: 1px solid var(--border); text-align: left; }
   th { color: var(--muted); font-weight: 600; }
+  td.num, th.num { text-align: right; }
   .TRACKING { color: var(--ok); } .COASTING, .STALE { color: var(--warn); }
+  .LOST { color: var(--ng); }
+  .warnbg { color: var(--ng); font-weight: 700; }
+  .dim { color: var(--muted); }
 </style>
 </head>
 <body>
 <header>
   <h1>M5Stamp UWB RTLS</h1>
   <span id="status">connecting…</span>
+  <label class="toggle" id="truthToggle"><input type="checkbox" id="showTruth" checked>真値表示 (dev)</label>
 </header>
 <main>
-  <canvas id="map" width="600" height="600"></canvas>
-  <div id="tags"><table>
-    <thead><tr><th>tag</th><th>x</th><th>y</th><th>cell</th><th>state</th><th>res</th></tr></thead>
-    <tbody id="tagbody"></tbody>
-  </table></div>
+  <canvas id="map" width="620" height="620"></canvas>
+  <aside>
+    <section>
+      <h2>タグ</h2>
+      <table>
+        <thead><tr><th>tag</th><th class="num">x</th><th class="num">y</th><th>cell</th>
+          <th>state</th><th class="num">res[m]</th><th class="num">使用</th><th class="num">誤差[m]</th></tr></thead>
+        <tbody id="tagbody"></tbody>
+      </table>
+      <div class="dim" style="font-size:0.72rem;margin-top:0.3rem">
+        誤差 = 真値との距離のローリング中央値 (直近30エポック、真値受信時のみ)</div>
+    </section>
+    <section>
+      <h2>アンカー監視 (直近5分)</h2>
+      <table>
+        <thead><tr><th>anchor</th><th class="num">測距数</th><th class="num">欠測率</th></tr></thead>
+        <tbody id="anchorbody"></tbody>
+      </table>
+    </section>
+    <section>
+      <h2>受信統計</h2>
+      <table>
+        <thead><tr><th>tag</th><th class="num">受信</th><th class="num">破棄</th>
+          <th class="num">clock skew[ms]</th></tr></thead>
+        <tbody id="statbody"></tbody>
+      </table>
+    </section>
+  </aside>
 </main>
 <script>
 const canvas = document.getElementById("map");
 const ctx = canvas.getContext("2d");
 const statusEl = document.getElementById("status");
-const tagbody = document.getElementById("tagbody");
 let floor = null;
-const tags = new Map();   // tag -> {x_m, y_m, state, cell, residual_m, trail: []}
-const TRAIL_MS = 30000;
-
-function sx(x) { return x / floor.width_m * canvas.width; }
-function sy(y) { return canvas.height - y / floor.height_m * canvas.height; }
+const tags = new Map();    // tagName -> {x_m,y_m,state,cell,residual,used,rejected,trail,errs,truth}
+let stats = null;
+let truthSeen = false;
+const TRAIL_MS = 30000, REJECT_FLASH_MS = 2000, TRUTH_MATCH_MS = 700;
 
 const TAG_COLORS = ["#4FC3CF", "#E5C67E", "#CF9BE8", "#6FCF8E", "#E08886"];
-function colorOf(tag) {
-  const i = parseInt(tag, 16) % TAG_COLORS.length;
-  return TAG_COLORS[i];
+const colorOf = (name) => TAG_COLORS[parseInt(name, 16) % TAG_COLORS.length];
+const sx = (x) => x / floor.width_m * canvas.width;
+const sy = (y) => canvas.height - y / floor.height_m * canvas.height;
+const fmt = (v, d = 2) => (v == null || Number.isNaN(v)) ? "–" : v.toFixed(d);
+
+function median(arr) {
+  if (!arr.length) return null;
+  const s = [...arr].sort((a, b) => a - b);
+  return s[Math.floor(s.length / 2)];
+}
+
+function anchorFailRate(name) {
+  const a = stats && stats.anchors && stats.anchors[name];
+  return a && a.n > 0 ? a.fail_rate : null;
 }
 
 function draw() {
   if (!floor) return;
   ctx.clearRect(0, 0, canvas.width, canvas.height);
-  // cells
+  const now = Date.now();
+  // セル境界
   ctx.strokeStyle = "#2A3538"; ctx.lineWidth = 1;
   for (const c of Object.values(floor.cells)) {
     const [x0, y0, x1, y1] = c.rect;
     ctx.strokeRect(sx(x0), sy(y1), sx(x1) - sx(x0), sy(y0) - sy(y1));
   }
-  // anchors
+  // アンカー (欠測率で色分け)
   for (const [name, a] of Object.entries(floor.anchors)) {
-    ctx.fillStyle = "#93A4A8";
+    const fr = anchorFailRate(name);
+    ctx.fillStyle = fr == null ? "#5A6B70" : (fr > 0.3 ? "#E08886" : "#93A4A8");
     ctx.beginPath(); ctx.arc(sx(a.x), sy(a.y), 5, 0, Math.PI * 2); ctx.fill();
     ctx.fillStyle = "#5A6B70"; ctx.font = "10px monospace";
-    ctx.fillText(name, sx(a.x) + 7, sy(a.y) - 5);
+    ctx.fillText(name.slice(-2), sx(a.x) + 7, sy(a.y) - 5);
   }
-  // tags
-  const now = Date.now();
+  const showTruth = document.getElementById("showTruth").checked;
   for (const [name, t] of tags) {
-    if (t.state === "LOST") continue;
+    if (t.state === "LOST" || t.x_m == null) continue;
     const color = colorOf(name);
-    // trail
+    // 使用アンカーへの接続線
+    ctx.strokeStyle = color; ctx.globalAlpha = 0.25; ctx.lineWidth = 1;
+    for (const an of (t.used || [])) {
+      const a = floor.anchors[an];
+      if (!a) continue;
+      ctx.beginPath(); ctx.moveTo(sx(t.x_m), sy(t.y_m)); ctx.lineTo(sx(a.x), sy(a.y)); ctx.stroke();
+    }
+    ctx.globalAlpha = 1;
+    // 棄却アンカー (2 秒間だけ赤破線)
+    if (t.rejectedAt && now - t.rejectedAt < REJECT_FLASH_MS) {
+      ctx.strokeStyle = "#E08886"; ctx.setLineDash([4, 4]); ctx.lineWidth = 1.5;
+      for (const an of t.rejected || []) {
+        const a = floor.anchors[an];
+        if (!a) continue;
+        ctx.beginPath(); ctx.moveTo(sx(t.x_m), sy(t.y_m)); ctx.lineTo(sx(a.x), sy(a.y)); ctx.stroke();
+      }
+      ctx.setLineDash([]);
+    }
+    // 軌跡
     ctx.strokeStyle = color; ctx.globalAlpha = 0.35; ctx.lineWidth = 1.5;
     ctx.beginPath();
     let first = true;
@@ -85,10 +149,25 @@ function draw() {
       if (first) { ctx.moveTo(sx(p.x), sy(p.y)); first = false; }
       else ctx.lineTo(sx(p.x), sy(p.y));
     }
-    ctx.stroke(); ctx.globalAlpha = 1.0;
-    // marker
+    ctx.stroke(); ctx.globalAlpha = 1;
+    // 真値 (dev): 白抜き丸 + 誤差ベクトル
+    if (showTruth && t.truth && now - t.truth.at < 3000) {
+      ctx.strokeStyle = color; ctx.lineWidth = 1.5;
+      ctx.beginPath(); ctx.arc(sx(t.truth.x), sy(t.truth.y), 6, 0, Math.PI * 2); ctx.stroke();
+      ctx.globalAlpha = 0.6;
+      ctx.beginPath(); ctx.moveTo(sx(t.truth.x), sy(t.truth.y));
+      ctx.lineTo(sx(t.x_m), sy(t.y_m)); ctx.stroke();
+      ctx.globalAlpha = 1;
+    }
+    // 本体マーカー: 残差を輪の半径に反映
     ctx.fillStyle = color;
-    ctx.beginPath(); ctx.arc(sx(t.x_m), sy(t.y_m), 7, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.arc(sx(t.x_m), sy(t.y_m), 6, 0, Math.PI * 2); ctx.fill();
+    const resPx = Math.min(30, (t.residual || 0) / floor.width_m * canvas.width);
+    if (resPx > 1) {
+      ctx.strokeStyle = color; ctx.globalAlpha = 0.5;
+      ctx.beginPath(); ctx.arc(sx(t.x_m), sy(t.y_m), 6 + resPx, 0, Math.PI * 2); ctx.stroke();
+      ctx.globalAlpha = 1;
+    }
     if (t.state !== "TRACKING") {
       ctx.strokeStyle = "#E5C67E"; ctx.lineWidth = 2;
       ctx.beginPath(); ctx.arc(sx(t.x_m), sy(t.y_m), 11, 0, Math.PI * 2); ctx.stroke();
@@ -96,22 +175,63 @@ function draw() {
     ctx.fillStyle = "#E2E9EA"; ctx.font = "11px monospace";
     ctx.fillText(name, sx(t.x_m) + 10, sy(t.y_m) + 4);
   }
-  // table
-  tagbody.innerHTML = [...tags.entries()].map(([name, t]) =>
-    `<tr><td>${name}</td><td>${t.x_m.toFixed(2)}</td><td>${t.y_m.toFixed(2)}</td>` +
-    `<td>${t.cell}</td><td class="${t.state}">${t.state}</td>` +
-    `<td>${(t.residual_m ?? 0).toFixed(2)}</td></tr>`).join("");
+  renderTables();
+}
+
+function renderTables() {
+  document.getElementById("tagbody").innerHTML = [...tags.entries()].map(([name, t]) =>
+    `<tr><td style="color:${colorOf(name)}">${name}</td>` +
+    `<td class="num">${fmt(t.x_m)}</td><td class="num">${fmt(t.y_m)}</td>` +
+    `<td>${t.cell || ""}</td><td class="${t.state}">${t.state || ""}</td>` +
+    `<td class="num">${fmt(t.residual)}</td>` +
+    `<td class="num">${t.n_used ?? "–"}/${(t.used?.length ?? 0) + (t.rejected?.length ?? 0)}</td>` +
+    `<td class="num">${fmt(median(t.errs))}</td></tr>`).join("");
+  if (stats) {
+    document.getElementById("anchorbody").innerHTML =
+      Object.entries(stats.anchors || {}).sort().map(([name, a]) =>
+        `<tr><td>${name}</td><td class="num">${a.n}</td>` +
+        `<td class="num ${a.fail_rate > 0.3 ? "warnbg" : ""}">${(a.fail_rate * 100).toFixed(1)}%</td></tr>`
+      ).join("");
+    document.getElementById("statbody").innerHTML =
+      Object.entries(stats.tags || {}).sort().map(([name, s]) =>
+        `<tr><td>${name}</td><td class="num">${s.received}</td>` +
+        `<td class="num">${s.dropped_invalid + s.dropped_stale}</td>` +
+        `<td class="num">${s.clock_skew_ms ?? "–"}</td></tr>`).join("");
+  }
 }
 
 function onPosition(m) {
   const name = m.tag;
   let t = tags.get(name);
-  if (!t) { t = { trail: [] }; tags.set(name, t); }
-  Object.assign(t, { x_m: m.x_m, y_m: m.y_m, state: m.state, cell: m.cell,
-                     residual_m: m.quality ? m.quality.residual_m : 0 });
+  if (!t) { t = { trail: [], errs: [] }; tags.set(name, t); }
+  Object.assign(t, {
+    x_m: m.x_m, y_m: m.y_m, state: m.state, cell: m.cell,
+    residual: m.quality ? m.quality.residual_m : 0,
+    n_used: m.quality ? m.quality.n_anchors : 0,
+    used: m.anchors_used || [],
+  });
+  if ((m.anchors_rejected || []).length) {
+    t.rejected = m.anchors_rejected;
+    t.rejectedAt = Date.now();
+  }
   t.trail.push({ x: m.x_m, y: m.y_m, at: Date.now() });
   while (t.trail.length > 400) t.trail.shift();
+  // 真値との誤差 (時刻が近いときのみ)
+  if (t.truth && Math.abs(m.t_ms - t.truth.t_ms) < TRUTH_MATCH_MS) {
+    t.errs.push(Math.hypot(m.x_m - t.truth.x, m.y_m - t.truth.y));
+    while (t.errs.length > 30) t.errs.shift();
+  }
   draw();
+}
+
+function onTruth(m) {
+  if (!truthSeen) {
+    truthSeen = true;
+    document.getElementById("truthToggle").classList.add("available");
+  }
+  let t = tags.get(m.tag);
+  if (!t) { t = { trail: [], errs: [] }; tags.set(m.tag, t); }
+  t.truth = { x: m.x_m, y: m.y_m, t_ms: m.t_ms, at: Date.now() };
 }
 
 function connectWs() {
@@ -120,6 +240,8 @@ function connectWs() {
   ws.onmessage = (ev) => {
     const m = JSON.parse(ev.data);
     if (m.type === "position") onPosition(m);
+    else if (m.type === "truth") onTruth(m);
+    else if (m.type === "stats") { stats = m; renderTables(); }
   };
   ws.onclose = () => {
     statusEl.textContent = "disconnected — retrying";
@@ -129,13 +251,14 @@ function connectWs() {
 
 async function init() {
   floor = await (await fetch("/api/floor")).json();
-  // 既存タグの初期表示
   const existing = await (await fetch("/api/tags")).json();
   for (const [name, t] of Object.entries(existing)) {
-    tags.set(name, { ...t, trail: [] });
+    tags.set(name, { ...t, residual: t.residual_m, trail: [], errs: [] });
   }
   draw();
   connectWs();
+  document.getElementById("showTruth").addEventListener("change", draw);
+  setInterval(draw, 1000);  // 棄却フラッシュ・軌跡の経時フェード用
 }
 init();
 </script>

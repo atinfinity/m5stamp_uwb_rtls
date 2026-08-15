@@ -22,7 +22,8 @@ from server.config import load_config  # noqa: E402
 from server.simulate import SimParams, simulate  # noqa: E402
 
 
-async def run(config_path: str, rate_hz: float, duration_s: float) -> None:
+async def run(config_path: str, rate_hz: float, duration_s: float,
+              publish_truth: bool = True) -> None:
     config = load_config(config_path)
     params = SimParams(rate_hz=rate_hz)
     n_tags = len(config.tags)
@@ -34,13 +35,18 @@ async def run(config_path: str, rate_hz: float, duration_s: float) -> None:
         print(f"virtual tags: {n_tags} tags at {rate_hz} Hz -> "
               f"mqtt://{config.mqtt.host}:{config.mqtt.port}")
         sent = 0
-        for msg, _truth in gen:
+        for msg, truth in gen:
             # シミュレータの合成時刻を実時刻へ差し替える
             msg = dict(msg)
             msg.pop("recv_ms", None)
-            msg["t_ms"] = int(time.time() * 1000)
+            now_ms = int(time.time() * 1000)
+            msg["t_ms"] = now_ms
             topic = f"rtls/tag/{msg['tag']}/ranges"
             await client.publish(topic, json.dumps(msg), qos=0)
+            if publish_truth:
+                t = dict(truth)
+                t["t_ms"] = now_ms
+                await client.publish("rtls/sim/truth", json.dumps(t), qos=0)
             sent += 1
             if sent % (n_tags * int(rate_hz) * 10 or 1) == 0:
                 print(f"sent {sent} epochs")
@@ -52,9 +58,12 @@ def main() -> int:
     ap.add_argument("--config", default="server/config.yaml")
     ap.add_argument("--rate-hz", type=float, default=2.0)
     ap.add_argument("--duration-s", type=float, default=3600.0)
+    ap.add_argument("--no-truth", action="store_true",
+                    help="真値 (rtls/sim/truth) を publish しない")
     args = ap.parse_args()
     try:
-        asyncio.run(run(args.config, args.rate_hz, args.duration_s))
+        asyncio.run(run(args.config, args.rate_hz, args.duration_s,
+                        publish_truth=not args.no_truth))
     except KeyboardInterrupt:
         pass
     return 0

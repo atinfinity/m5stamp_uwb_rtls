@@ -38,8 +38,12 @@ class TagPipeline:
 
     # ---- ②③ 補正とゲーティング ----
 
-    def _usable_ranges(self, rs: RangeSet, dt_s: float) -> list[tuple[tuple[float, float], float]]:
-        out: list[tuple[tuple[float, float], float]] = []
+    def _usable_ranges(
+        self, rs: RangeSet, dt_s: float
+    ) -> tuple[list[tuple[int, tuple[float, float], float]], list[int]]:
+        """採用した (アンカー, 座標, 水平距離) と、棄却したアンカーを返す。"""
+        out: list[tuple[int, tuple[float, float], float]] = []
+        rejected: list[int] = []
         predicted = None
         if self._kf.initialized:
             px, py, _, _ = self._kf.state()
@@ -54,30 +58,34 @@ class TagPipeline:
             dz = a.z - self._cfg.floor.tag_height_m
             h = geometry.horizontal_range_m(slant_m, dz)
             if h is None:
+                rejected.append(r.anchor)
                 continue
             if predicted is not None and not outlier.gate(
                 (a.x, a.y), h, predicted, self._tuning.v_max_ms, dt_s,
                 self._tuning.gate_margin_m,
             ):
+                rejected.append(r.anchor)
                 continue
-            out.append(((a.x, a.y), h))
-        return out
+            out.append((r.anchor, (a.x, a.y), h))
+        return out, rejected
 
     # ---- ④⑤⑥ 解算と外れ値除去 ----
 
-    def _solve(self, usable: list[tuple[tuple[float, float], float]]):
-        anchors = [u[0] for u in usable]
-        ranges = [u[1] for u in usable]
+    def _solve(self, usable: list[tuple[int, tuple[float, float], float]]):
+        """(解, 使用アンカー, 追加棄却アンカー) を返す。"""
+        anchors = [u[1] for u in usable]
+        ranges = [u[2] for u in usable]
+        addrs = [u[0] for u in usable]
         sol = geometry.solve_2d(anchors, ranges)
         if sol is None:
-            return None, len(usable)
+            return None, addrs, []
         worst = max(range(len(sol.residuals)), key=lambda i: abs(sol.residuals[i]))
         if abs(sol.residuals[worst]) > self._tuning.residual_gate_m and len(usable) >= 4:
             reduced = [u for i, u in enumerate(usable) if i != worst]
-            sol2 = geometry.solve_2d([u[0] for u in reduced], [u[1] for u in reduced])
+            sol2 = geometry.solve_2d([u[1] for u in reduced], [u[2] for u in reduced])
             if sol2 is not None and sol2.rms_residual < sol.rms_residual:
-                return sol2, len(reduced)
-        return sol, len(usable)
+                return sol2, [u[0] for u in reduced], [addrs[worst]]
+        return sol, addrs, []
 
     # ---- 本体 ----
 
@@ -97,7 +105,7 @@ class TagPipeline:
             self._last_success_ms = None
 
         self._last_t_ms = rs.t_ms
-        usable = self._usable_ranges(rs, dt_s)
+        usable, rejected = self._usable_ranges(rs, dt_s)
 
         if len(usable) < 3:
             # 欠測エポック: 予測のみ (COASTING)。フィルタ未初期化なら何も出せない。
@@ -106,16 +114,19 @@ class TagPipeline:
             self._kf.predict(dt_s)
             x, y, vx, vy = self._kf.state()
             state = self._staleness_state(rs.t_ms, default=TagTrackState.COASTING)
-            return self._position(rs.t_ms, x, y, vx, vy, 0, 0.0, state)
+            return self._position(rs.t_ms, x, y, vx, vy, 0, 0.0, state,
+                                  rejected=tuple(rejected))
 
-        sol, n_used = self._solve(usable)
+        sol, used_addrs, loo_rejected = self._solve(usable)
+        rejected.extend(loo_rejected)
         if sol is None:
             if not self._kf.initialized:
                 return None
             self._kf.predict(dt_s)
             x, y, vx, vy = self._kf.state()
             state = self._staleness_state(rs.t_ms, default=TagTrackState.COASTING)
-            return self._position(rs.t_ms, x, y, vx, vy, 0, 0.0, state)
+            return self._position(rs.t_ms, x, y, vx, vy, 0, 0.0, state,
+                                  rejected=tuple(rejected))
 
         sigma_m = max(self._tuning.sigma_m_floor, sol.rms_residual)
         if not self._kf.initialized:
@@ -126,8 +137,9 @@ class TagPipeline:
         self._last_success_ms = rs.t_ms
 
         x, y, vx, vy = self._kf.state()
-        return self._position(rs.t_ms, x, y, vx, vy, n_used, sol.rms_residual,
-                              TagTrackState.TRACKING)
+        return self._position(rs.t_ms, x, y, vx, vy, len(used_addrs), sol.rms_residual,
+                              TagTrackState.TRACKING, used=tuple(used_addrs),
+                              rejected=tuple(rejected))
 
     def _staleness_state(self, t_ms: int, default: TagTrackState) -> TagTrackState:
         if self._last_success_ms is None:
@@ -140,9 +152,11 @@ class TagPipeline:
         return default
 
     def _position(self, t_ms: int, x: float, y: float, vx: float, vy: float,
-                  n_used: int, residual: float, state: TagTrackState) -> Position:
+                  n_used: int, residual: float, state: TagTrackState,
+                  used: tuple[int, ...] = (), rejected: tuple[int, ...] = ()) -> Position:
         if self._cells is not None:
             self._cell = self._cells.select(x, y, self._cell)
         return Position(tag=self._tag, t_ms=t_ms, x_m=x, y_m=y, vx_ms=vx, vy_ms=vy,
                         n_used=n_used, residual_m=residual,
-                        cell=self._cell or "", state=state)
+                        cell=self._cell or "", state=state,
+                        used=used, rejected=rejected)
