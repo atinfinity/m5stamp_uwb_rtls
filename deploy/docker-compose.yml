@@ -1,0 +1,27 @@
+# RTLS 常設デプロイ (Issue #18): MQTT ブローカー + 測位サーバー + Web UI
+#   docker compose up -d --build   → http://localhost:8000
+# アンカー/タグ/仮想タグはホスト側 1883 へ接続する (config は server/config.yaml を共有)
+services:
+  mosquitto:
+    image: eclipse-mosquitto:2
+    ports:
+      - "1883:1883"
+    volumes:
+      - ./mosquitto.conf:/mosquitto/config/mosquitto.conf:ro
+    restart: unless-stopped
+
+  server:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile
+    depends_on:
+      - mosquitto
+    ports:
+      - "8000:8000"
+    volumes:
+      - ../server/config.yaml:/app/config/config.yaml:ro
+      - rtls-logs:/app/logs
+    restart: unless-stopped
+
+volumes:
+  rtls-logs:
