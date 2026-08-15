@@ -29,6 +29,9 @@
   table { border-collapse: collapse; width: 100%; font-size: 0.78rem;
           font-variant-numeric: tabular-nums; }
   td, th { padding: 0.25rem 0.5rem; border-bottom: 1px solid var(--border); text-align: left; }
+  select, button { background: var(--surface-2); color: var(--text); border: 1px solid var(--border);
+                   border-radius: 4px; padding: 0.25rem 0.6rem; font-size: 0.8rem; }
+  button:hover { border-color: var(--accent); cursor: pointer; }
   th { color: var(--muted); font-weight: 600; }
   td.num, th.num { text-align: right; }
   .TRACKING { color: var(--ok); } .COASTING, .STALE { color: var(--warn); }
@@ -49,6 +52,9 @@
   <h1>M5Stamp UWB RTLS</h1>
   <span id="status">connecting…</span>
   <label class="toggle" id="truthToggle"><input type="checkbox" id="showTruth" checked>真値表示 (dev)</label>
+  <span style="flex:1"></span>
+  <span id="replayBadge" style="display:none;font-size:0.78rem;color:var(--warn)">
+    ▶ リプレイ中: <span id="replayInfo"></span></span>
 </header>
 <main>
   <div id="maparea">
@@ -83,6 +89,41 @@
       </table>
     </section>
     <section>
+      <h2>ヒートマップ (1 m グリッド)</h2>
+      <div style="display:flex;gap:0.6rem;align-items:center;font-size:0.8rem">
+        <select id="heatmapMode">
+          <option value="none">表示なし</option>
+          <option value="occupancy">滞在</option>
+          <option value="residual">平均残差</option>
+          <option value="error">平均誤差 (dev)</option>
+        </select>
+        <button id="heatmapReset">リセット</button>
+        <span class="dim" id="heatmapInfo"></span>
+      </div>
+    </section>
+    <section>
+      <h2>リプレイ</h2>
+      <div style="display:flex;gap:0.5rem 1rem;align-items:center;flex-wrap:wrap;font-size:0.8rem">
+        <label style="display:inline-flex;align-items:center;gap:0.35rem">測距ログ
+          <select id="replayFile" style="max-width:210px"></select></label>
+        <label style="display:inline-flex;align-items:center;gap:0.35rem">真値ログ (sim)
+          <select id="replayTruth" style="max-width:180px"
+            title="シミュレータ出力の真値。誤差ヒートマップに必要 (実測ログには存在しない)"></select></label>
+        <select id="replaySpeed">
+          <option value="1">1x</option><option value="2">2x</option>
+          <option value="4" selected>4x</option><option value="8">8x</option>
+          <option value="0">最速</option><option value="0.5">0.5x</option>
+        </select>
+        <button id="replayPlay">再生</button>
+        <button id="replayPause">一時停止</button>
+        <button id="replayStop">停止</button>
+        <span class="dim" id="replayProgress"></span>
+      </div>
+      <div class="dim" style="font-size:0.72rem;margin-top:0.3rem">
+        真値ログはシミュレータ出力にのみ存在する(実測ログの場合は「真値なし」のまま —
+        誤差の代わりに残差ヒートマップを使う)。リプレイ中はライブ表示と混ざるため、仮想タグ/実機は止めて使うこと</div>
+    </section>
+    <section>
       <h2>受信統計</h2>
       <table>
         <thead><tr><th>tag</th><th class="num">受信</th><th class="num">破棄</th>
@@ -100,6 +141,8 @@ let floor = null;
 const tags = new Map();    // tagName -> {x_m,y_m,state,cell,residual,used,rejected,trail,errs,truth}
 let stats = null;
 let obstacles = [];        // シミュレータの遮蔽物 (dev)
+// ヒートマップ (1 m グリッド): key "gx,gy" -> {n, sumRes, nErr, sumErr}
+const heat = new Map();
 let truthSeen = false;
 const TRAIL_MS = 30000, REJECT_FLASH_MS = 2000, TRUTH_MATCH_MS = 700;
 
@@ -123,13 +166,13 @@ function anchorFailRate(name) {
 function draw() {
   if (!floor) return;
   ctx.clearRect(0, 0, canvas.width, canvas.height);
-  const now = Date.now();
   // セル境界
   ctx.strokeStyle = "#2A3538"; ctx.lineWidth = 1;
   for (const c of Object.values(floor.cells)) {
     const [x0, y0, x1, y1] = c.rect;
     ctx.strokeRect(sx(x0), sy(y1), sx(x1) - sx(x0), sy(y0) - sy(y1));
   }
+  drawHeatmap();
   // 遮蔽物 (dev): シミュレータが定義した矩形
   for (const [x0, y0, x1, y1] of obstacles) {
     ctx.fillStyle = "rgba(147, 164, 168, 0.25)";
@@ -147,8 +190,36 @@ function draw() {
   }
   const showTruth = document.getElementById("showTruth").checked;
   for (const [name, t] of tags) {
-    if (t.state === "LOST" || t.x_m == null) continue;
     const color = colorOf(name);
+    // 寿命判定はデータ時刻 (t_ms) 基準: リプレイの一時停止中は時間が進まず
+    // 軌跡が凍結され、再生速度によらず「データ 30 秒ぶん」が表示される
+    const ref = t.lastTms || 0;
+    const truthRef = t.lastTruthTms || 0;
+    // ---- 真値系 (dev) は位置推定の有無・状態に依存せず描く ----
+    if (showTruth && t.truthTrail && t.truthTrail.length > 1) {
+      ctx.strokeStyle = color; ctx.globalAlpha = 0.45; ctx.lineWidth = 1.2;
+      ctx.setLineDash([2, 4]);
+      ctx.beginPath();
+      let tfirst = true;
+      for (const p of t.truthTrail) {
+        if (truthRef - p.t > TRAIL_MS) continue;
+        if (tfirst) { ctx.moveTo(sx(p.x), sy(p.y)); tfirst = false; }
+        else ctx.lineTo(sx(p.x), sy(p.y));
+      }
+      ctx.stroke(); ctx.setLineDash([]); ctx.globalAlpha = 1;
+    }
+    if (showTruth && t.truth && truthRef - t.truth.t_ms < 3000) {
+      ctx.strokeStyle = color; ctx.lineWidth = 1.5;
+      ctx.beginPath(); ctx.arc(sx(t.truth.x), sy(t.truth.y), 6, 0, Math.PI * 2); ctx.stroke();
+      if (t.x_m != null && t.state !== "LOST") {  // 誤差ベクトルは推定があるときのみ
+        ctx.globalAlpha = 0.6;
+        ctx.beginPath(); ctx.moveTo(sx(t.truth.x), sy(t.truth.y));
+        ctx.lineTo(sx(t.x_m), sy(t.y_m)); ctx.stroke();
+        ctx.globalAlpha = 1;
+      }
+    }
+    // ---- 以降は位置推定があるタグのみ ----
+    if (t.state === "LOST" || t.x_m == null) continue;
     // 使用アンカーへの接続線
     ctx.strokeStyle = color; ctx.globalAlpha = 0.25; ctx.lineWidth = 1;
     for (const an of (t.used || [])) {
@@ -157,8 +228,8 @@ function draw() {
       ctx.beginPath(); ctx.moveTo(sx(t.x_m), sy(t.y_m)); ctx.lineTo(sx(a.x), sy(a.y)); ctx.stroke();
     }
     ctx.globalAlpha = 1;
-    // 棄却アンカー (2 秒間だけ赤破線)
-    if (t.rejectedAt && now - t.rejectedAt < REJECT_FLASH_MS) {
+    // 棄却アンカー (データ時刻で 2 秒間だけ赤破線)
+    if (t.rejectedAtTms && ref - t.rejectedAtTms < REJECT_FLASH_MS) {
       ctx.strokeStyle = "#E08886"; ctx.setLineDash([4, 4]); ctx.lineWidth = 1.5;
       for (const an of t.rejected || []) {
         const a = floor.anchors[an];
@@ -172,33 +243,11 @@ function draw() {
     ctx.beginPath();
     let first = true;
     for (const p of t.trail) {
-      if (now - p.at > TRAIL_MS) continue;
+      if (ref - p.t > TRAIL_MS) continue;
       if (first) { ctx.moveTo(sx(p.x), sy(p.y)); first = false; }
       else ctx.lineTo(sx(p.x), sy(p.y));
     }
     ctx.stroke(); ctx.globalAlpha = 1;
-    // 真値軌跡 (dev): 点線
-    if (showTruth && t.truthTrail && t.truthTrail.length > 1) {
-      ctx.strokeStyle = color; ctx.globalAlpha = 0.45; ctx.lineWidth = 1.2;
-      ctx.setLineDash([2, 4]);
-      ctx.beginPath();
-      let tfirst = true;
-      for (const p of t.truthTrail) {
-        if (now - p.at > TRAIL_MS) continue;
-        if (tfirst) { ctx.moveTo(sx(p.x), sy(p.y)); tfirst = false; }
-        else ctx.lineTo(sx(p.x), sy(p.y));
-      }
-      ctx.stroke(); ctx.setLineDash([]); ctx.globalAlpha = 1;
-    }
-    // 真値 (dev): 白抜き丸 + 誤差ベクトル
-    if (showTruth && t.truth && now - t.truth.at < 3000) {
-      ctx.strokeStyle = color; ctx.lineWidth = 1.5;
-      ctx.beginPath(); ctx.arc(sx(t.truth.x), sy(t.truth.y), 6, 0, Math.PI * 2); ctx.stroke();
-      ctx.globalAlpha = 0.6;
-      ctx.beginPath(); ctx.moveTo(sx(t.truth.x), sy(t.truth.y));
-      ctx.lineTo(sx(t.x_m), sy(t.y_m)); ctx.stroke();
-      ctx.globalAlpha = 1;
-    }
     // 本体マーカー: 残差を輪の半径に反映
     ctx.fillStyle = color;
     ctx.beginPath(); ctx.arc(sx(t.x_m), sy(t.y_m), 6, 0, Math.PI * 2); ctx.fill();
@@ -240,6 +289,49 @@ function renderTables() {
   }
 }
 
+function heatColor(v) {  // v: 0..1 → 緑→黄→赤
+  const r = Math.min(255, Math.round(v * 2 * 255));
+  const g = Math.min(255, Math.round((1 - Math.max(0, v - 0.5) * 2) * 255));
+  return `rgba(${r},${g},80,0.45)`;
+}
+
+function drawHeatmap() {
+  const mode = document.getElementById("heatmapMode").value;
+  if (mode === "none" || heat.size === 0) return;
+  let maxN = 1;
+  for (const c of heat.values()) maxN = Math.max(maxN, c.n);
+  const cw = canvas.width / floor.width_m, ch = canvas.height / floor.height_m;
+  for (const [key, c] of heat) {
+    const [gx, gy] = key.split(",").map(Number);
+    let style = null;
+    if (mode === "occupancy") {
+      const a = 0.06 + 0.34 * Math.log1p(c.n) / Math.log1p(maxN);
+      style = `rgba(79,195,207,${a.toFixed(3)})`;             // accent の濃淡
+    } else if (mode === "residual" && c.n > 0) {
+      style = heatColor(Math.min(1, (c.sumRes / c.n) / 0.5)); // 0.5 m で赤
+    } else if (mode === "error" && c.nErr > 0) {
+      style = heatColor(Math.min(1, (c.sumErr / c.nErr) / 0.5));
+    }
+    if (style) {
+      ctx.fillStyle = style;
+      ctx.fillRect(gx * cw, canvas.height - (gy + 1) * ch, cw, ch);
+    }
+  }
+}
+
+function heatAccumulate(m, err) {
+  if (m.state !== "TRACKING") return;
+  const gx = Math.floor(m.x_m), gy = Math.floor(m.y_m);
+  if (gx < 0 || gy < 0 || gx >= floor.width_m || gy >= floor.height_m) return;
+  const key = `${gx},${gy}`;
+  let c = heat.get(key);
+  if (!c) { c = { n: 0, sumRes: 0, nErr: 0, sumErr: 0 }; heat.set(key, c); }
+  c.n++;
+  c.sumRes += m.quality ? m.quality.residual_m : 0;
+  if (err != null) { c.nErr++; c.sumErr += err; }
+  document.getElementById("heatmapInfo").textContent = `${heat.size} セル蓄積`;
+}
+
 function onPosition(m) {
   const name = m.tag;
   let t = tags.get(name);
@@ -250,17 +342,21 @@ function onPosition(m) {
     n_used: m.quality ? m.quality.n_anchors : 0,
     used: m.anchors_used || [],
   });
+  t.lastTms = m.t_ms;
   if ((m.anchors_rejected || []).length) {
     t.rejected = m.anchors_rejected;
-    t.rejectedAt = Date.now();
+    t.rejectedAtTms = m.t_ms;
   }
-  t.trail.push({ x: m.x_m, y: m.y_m, at: Date.now() });
+  t.trail.push({ x: m.x_m, y: m.y_m, t: m.t_ms });
   while (t.trail.length > 400) t.trail.shift();
   // 真値との誤差 (時刻が近いときのみ)
+  let err = null;
   if (t.truth && Math.abs(m.t_ms - t.truth.t_ms) < TRUTH_MATCH_MS) {
-    t.errs.push(Math.hypot(m.x_m - t.truth.x, m.y_m - t.truth.y));
+    err = Math.hypot(m.x_m - t.truth.x, m.y_m - t.truth.y);
+    t.errs.push(err);
     while (t.errs.length > 30) t.errs.shift();
   }
+  heatAccumulate(m, err);
   draw();
 }
 
@@ -272,9 +368,10 @@ function onTruth(m) {
   }
   let t = tags.get(m.tag);
   if (!t) { t = { trail: [], errs: [] }; tags.set(m.tag, t); }
-  t.truth = { x: m.x_m, y: m.y_m, t_ms: m.t_ms, at: Date.now() };
+  t.truth = { x: m.x_m, y: m.y_m, t_ms: m.t_ms };
+  t.lastTruthTms = m.t_ms;
   t.truthTrail = t.truthTrail || [];
-  t.truthTrail.push({ x: m.x_m, y: m.y_m, at: Date.now() });
+  t.truthTrail.push({ x: m.x_m, y: m.y_m, t: m.t_ms });
   while (t.truthTrail.length > 400) t.truthTrail.shift();
 }
 
@@ -294,6 +391,7 @@ function connectWs() {
     else if (m.type === "truth") onTruth(m);
     else if (m.type === "stats") { stats = m; renderTables(); }
     else if (m.type === "obstacles") { setObstacles(m.obstacles || []); }
+    else if (m.type === "replay") { onReplayStatus(m); }
   };
   ws.onclose = () => {
     statusEl.textContent = "disconnected — retrying";
@@ -301,9 +399,67 @@ function connectWs() {
   };
 }
 
+// ---- リプレイ操作 ----
+function onReplayStatus(s) {
+  const badge = document.getElementById("replayBadge");
+  const active = s.state === "playing" || s.state === "paused";
+  badge.style.display = active ? "inline" : "none";
+  document.getElementById("replayInfo").textContent =
+    active ? `${s.file} (${s.state === "paused" ? "一時停止" : s.speed ? s.speed + "x" : "最速"})` : "";
+  document.getElementById("replayProgress").textContent =
+    s.state === "idle" ? "" : `${s.state}  ${s.idx}/${s.total}`;
+}
+
+async function loadReplayLogs() {
+  const logs = await (await fetch("/api/replay/logs")).json();
+  const opt = (l) =>
+    `<option value="${l.name}">${l.name} (${(l.size / 1024).toFixed(0)}KB)</option>`;
+  // 中身で分類された種別ごとに出し分ける (取り違え防止)
+  document.getElementById("replayFile").innerHTML =
+    logs.filter((l) => l.kind !== "truth").map(opt).join("");
+  const truthLogs = logs.filter((l) => l.kind === "truth");
+  const truthSel = document.getElementById("replayTruth");
+  if (truthLogs.length) {
+    truthSel.innerHTML = `<option value="">真値なし</option>` + truthLogs.map(opt).join("");
+    truthSel.disabled = false;
+  } else {
+    truthSel.innerHTML = `<option value="">真値ログなし (実測ログには真値は存在しない)</option>`;
+    truthSel.disabled = true;
+  }
+}
+
+async function setupReplayControls() {
+  loadReplayLogs();
+  // リロード後もサーバー側で再生が続いていればバッジ・進捗を復元する
+  onReplayStatus(await (await fetch("/api/replay/status")).json());
+  document.getElementById("replayPlay").addEventListener("click", async () => {
+    const file = document.getElementById("replayFile").value;
+    if (!file) return;
+    const speed = parseFloat(document.getElementById("replaySpeed").value);
+    const truth = document.getElementById("replayTruth").value || null;
+    tags.clear(); heat.clear(); draw();  // 画面をリプレイ内容に切り替える
+    await fetch("/api/replay/start", { method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ file, speed, truth }) });
+  });
+  document.getElementById("replayPause").addEventListener("click", async () => {
+    const st = (await (await fetch("/api/replay/status")).json()).state;
+    await fetch(st === "paused" ? "/api/replay/resume" : "/api/replay/pause", { method: "POST" });
+  });
+  document.getElementById("replayStop").addEventListener("click",
+    () => fetch("/api/replay/stop", { method: "POST" }));
+  document.getElementById("heatmapReset").addEventListener("click", () => {
+    heat.clear();
+    document.getElementById("heatmapInfo").textContent = "";
+    draw();
+  });
+  document.getElementById("heatmapMode").addEventListener("change", draw);
+}
+
 async function init() {
   floor = await (await fetch("/api/floor")).json();
   setObstacles(floor.sim_obstacles || []);
+  setupReplayControls();
   const existing = await (await fetch("/api/tags")).json();
   for (const [name, t] of Object.entries(existing)) {
     tags.set(name, { ...t, residual: t.residual_m, trail: [], errs: [] });

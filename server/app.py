@@ -24,6 +24,7 @@ from server.models import Position, RangeSet
 from server.monitor import Monitor
 from server.positioning.pipeline import TagPipeline
 from server.recorder import JsonlRecorder
+from server.replay_ctrl import ReplayController
 from server.web.api import Hub, create_app
 
 log = logging.getLogger("rtls")
@@ -43,6 +44,9 @@ class RtlsServer:
         self.hub = Hub()
         self.latest: dict[int, Position] = {}
         self.sim_obstacles: list[list[float]] = []  # 開発モード: シミュレータの遮蔽物
+        self.replay = ReplayController(
+            config, self.hub, [log_dir],
+            obstacles_sink=lambda obs: setattr(self, "sim_obstacles", obs))
         self._published_cell: dict[int, str] = {}
         self._client: aiomqtt.Client | None = None
 

@@ -80,6 +80,39 @@ def create_app(server) -> FastAPI:
     async def stats():
         return server.monitor.snapshot()
 
+    # ---- リプレイ操作 (Issue #26) ----
+
+    @app.get("/api/replay/logs")
+    async def replay_logs():
+        return server.replay.list_logs()
+
+    @app.post("/api/replay/start")
+    async def replay_start(body: dict):
+        truth = body.get("truth") or None
+        ok = await server.replay.start(str(body.get("file", "")),
+                                       float(body.get("speed", 1.0)),
+                                       truth_name=str(truth) if truth else None)
+        return {"ok": ok, **server.replay.status()}
+
+    @app.post("/api/replay/pause")
+    async def replay_pause():
+        server.replay.pause()
+        return server.replay.status()
+
+    @app.post("/api/replay/resume")
+    async def replay_resume():
+        server.replay.resume()
+        return server.replay.status()
+
+    @app.post("/api/replay/stop")
+    async def replay_stop():
+        await server.replay.stop()
+        return server.replay.status()
+
+    @app.get("/api/replay/status")
+    async def replay_status():
+        return server.replay.status()
+
     @app.websocket("/ws")
     async def ws_endpoint(ws: WebSocket):
         await ws.accept()

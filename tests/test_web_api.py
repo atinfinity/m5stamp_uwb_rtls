@@ -121,6 +121,37 @@ def test_obstacles_forwarding(server, client):
     assert client.get("/api/floor").json()["sim_obstacles"] == [[24.0, 15.0, 26.0, 35.0]]
 
 
+def test_replay_endpoints(server, client, tmp_path):
+    # server の log_dir (tmp) に空でないログを置いて一覧に出ることを確認
+    log_dir = server.recorder._dir
+    (log_dir / "ranges-x.jsonl").write_text('{"tag":"0x0001"}\n')
+    logs = client.get("/api/replay/logs").json()
+    assert [l["name"] for l in logs] == ["ranges-x.jsonl"]
+    assert client.get("/api/replay/status").json()["state"] == "idle"
+    # 存在しないファイルの開始は ok=False
+    r = client.post("/api/replay/start", json={"file": "nope.jsonl", "speed": 0}).json()
+    assert r["ok"] is False
+
+
+def test_replay_obstacles_survive_reload(server, client, config):
+    """リプレイ開始後の /api/floor に遮蔽壁が反映される (リロード対策)。"""
+    log_dir = server.recorder._dir
+    lines = [json.dumps({"meta": {"obstacles": [[24, 15, 26, 35]]}})]
+    from server.simulate import simulate
+    lines += [json.dumps(m) for m, _ in simulate(config, duration_s=3.0, seed=8)]
+    (log_dir / "ranges-meta.jsonl").write_text("\n".join(lines) + "\n")
+
+    async def run():
+        await server.replay.start("ranges-meta.jsonl", speed=0)
+        for _ in range(100):
+            if server.replay.state == "finished":
+                break
+            await asyncio.sleep(0.05)
+
+    asyncio.run(run())
+    assert client.get("/api/floor").json()["sim_obstacles"] == [[24.0, 15.0, 26.0, 35.0]]
+
+
 def test_websocket_connects(client):
     with client.websocket_connect("/ws") as ws:
         ws.send_text("ping")  # keepalive 経路が例外なく通ること
