@@ -121,6 +121,18 @@ def test_obstacles_forwarding(server, client):
     assert client.get("/api/floor").json()["sim_obstacles"] == [[24.0, 15.0, 26.0, 35.0]]
 
 
+def test_replay_endpoints(server, client, tmp_path):
+    # server の log_dir (tmp) に空でないログを置いて一覧に出ることを確認
+    log_dir = server.recorder._dir
+    (log_dir / "ranges-x.jsonl").write_text('{"tag":"0x0001"}\n')
+    logs = client.get("/api/replay/logs").json()
+    assert [l["name"] for l in logs] == ["ranges-x.jsonl"]
+    assert client.get("/api/replay/status").json()["state"] == "idle"
+    # 存在しないファイルの開始は ok=False
+    r = client.post("/api/replay/start", json={"file": "nope.jsonl", "speed": 0}).json()
+    assert r["ok"] is False
+
+
 def test_websocket_connects(client):
     with client.websocket_connect("/ws") as ws:
         ws.send_text("ping")  # keepalive 経路が例外なく通ること
