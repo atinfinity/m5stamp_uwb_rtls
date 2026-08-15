@@ -57,6 +57,7 @@
       <span class="item"><svg width="16" height="14"><circle cx="8" cy="7" r="6" fill="#4FC3CF"/></svg>測位結果(+軌跡)</span>
       <span class="item truth-item"><svg width="16" height="14"><circle cx="8" cy="7" r="5.5" fill="none" stroke="#4FC3CF" stroke-width="1.5"/></svg>真値 GT (dev)</span>
       <span class="item truth-item"><svg width="24" height="14"><line x1="1" y1="7" x2="23" y2="7" stroke="#4FC3CF" stroke-width="1.5" stroke-dasharray="2 3" opacity="0.8"/></svg>真値軌跡 (dev)</span>
+      <span class="item" id="legendObstacle" style="display:none"><svg width="16" height="14"><rect x="2" y="2" width="12" height="10" fill="#93A4A8" opacity="0.35" stroke="#93A4A8"/></svg>遮蔽物 (sim)</span>
       <span class="item"><svg width="24" height="14"><line x1="1" y1="7" x2="23" y2="7" stroke="#4FC3CF" stroke-width="1.5" opacity="0.5"/></svg>使用した測距</span>
       <span class="item"><svg width="24" height="14"><line x1="1" y1="7" x2="23" y2="7" stroke="#E08886" stroke-width="1.8" stroke-dasharray="4 4"/></svg>棄却された測距 (NLoS/ゲート)</span>
       <span class="item"><svg width="16" height="14"><circle cx="8" cy="7" r="4.5" fill="#93A4A8"/></svg>アンカー</span>
@@ -98,6 +99,7 @@ const statusEl = document.getElementById("status");
 let floor = null;
 const tags = new Map();    // tagName -> {x_m,y_m,state,cell,residual,used,rejected,trail,errs,truth}
 let stats = null;
+let obstacles = [];        // シミュレータの遮蔽物 (dev)
 let truthSeen = false;
 const TRAIL_MS = 30000, REJECT_FLASH_MS = 2000, TRUTH_MATCH_MS = 700;
 
@@ -126,6 +128,13 @@ function draw() {
   ctx.strokeStyle = "#2A3538"; ctx.lineWidth = 1;
   for (const c of Object.values(floor.cells)) {
     const [x0, y0, x1, y1] = c.rect;
+    ctx.strokeRect(sx(x0), sy(y1), sx(x1) - sx(x0), sy(y0) - sy(y1));
+  }
+  // 遮蔽物 (dev): シミュレータが定義した矩形
+  for (const [x0, y0, x1, y1] of obstacles) {
+    ctx.fillStyle = "rgba(147, 164, 168, 0.25)";
+    ctx.strokeStyle = "#93A4A8";
+    ctx.fillRect(sx(x0), sy(y1), sx(x1) - sx(x0), sy(y0) - sy(y1));
     ctx.strokeRect(sx(x0), sy(y1), sx(x1) - sx(x0), sy(y0) - sy(y1));
   }
   // アンカー (欠測率で色分け)
@@ -269,6 +278,13 @@ function onTruth(m) {
   while (t.truthTrail.length > 400) t.truthTrail.shift();
 }
 
+function setObstacles(list) {
+  obstacles = list;
+  document.getElementById("legendObstacle").style.display =
+    obstacles.length ? "inline-flex" : "none";
+  draw();
+}
+
 function connectWs() {
   const ws = new WebSocket(`ws://${location.host}/ws`);
   ws.onopen = () => { statusEl.textContent = "live"; };
@@ -277,6 +293,7 @@ function connectWs() {
     if (m.type === "position") onPosition(m);
     else if (m.type === "truth") onTruth(m);
     else if (m.type === "stats") { stats = m; renderTables(); }
+    else if (m.type === "obstacles") { setObstacles(m.obstacles || []); }
   };
   ws.onclose = () => {
     statusEl.textContent = "disconnected — retrying";
@@ -286,6 +303,7 @@ function connectWs() {
 
 async function init() {
   floor = await (await fetch("/api/floor")).json();
+  setObstacles(floor.sim_obstacles || []);
   const existing = await (await fetch("/api/tags")).json();
   for (const [name, t] of Object.entries(existing)) {
     tags.set(name, { ...t, residual: t.residual_m, trail: [], errs: [] });

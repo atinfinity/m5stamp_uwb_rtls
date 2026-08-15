@@ -58,6 +58,7 @@ def create_app(server) -> FastAPI:
                 for name, c in cfg.cells.items()
             },
             "tags": cfg.tags,
+            "sim_obstacles": server.sim_obstacles,  # 開発モード (無ければ空)
         }
 
     @app.get("/api/tags")

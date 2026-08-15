@@ -33,6 +33,11 @@ async def run(config_path: str, rate_hz: float, duration_s: float,
 
     gen = simulate(config, duration_s, seed=int(time.time()) % 10000, params=params)
     async with aiomqtt.Client(config.mqtt.host, config.mqtt.port) as client:
+        # 遮蔽物を UI 描画用に retained で公開 (無しの場合も空リストで上書きし、
+        # 過去の retained 値が残らないようにする)
+        await client.publish("rtls/sim/obstacles",
+                             json.dumps({"obstacles": [list(o) for o in obstacles]}),
+                             qos=1, retain=True)
         print(f"virtual tags: {n_tags} tags at {rate_hz} Hz -> "
               f"mqtt://{config.mqtt.host}:{config.mqtt.port}")
         sent = 0
