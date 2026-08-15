@@ -29,8 +29,13 @@ class TagPipeline:
 
     # ---- ① 検証 ----
 
+    #: seq が逆行していても t_ms がこれ以上新しければタグ再起動とみなして受理する
+    REBOOT_GAP_MS = 5000
+
     def _validate(self, rs: RangeSet) -> bool:
-        if self._last_seq is not None and rs.seq <= self._last_seq:
+        if (self._last_seq is not None and rs.seq <= self._last_seq
+                and (self._last_t_ms is None
+                     or rs.t_ms - self._last_t_ms < self.REBOOT_GAP_MS)):
             return False
         if rs.recv_ms - rs.t_ms > self._tuning.max_age_ms:
             return False

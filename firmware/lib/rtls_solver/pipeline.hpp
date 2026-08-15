@@ -46,6 +46,8 @@ struct PosOut {
 };
 
 constexpr int kMaxAnchorTable = 16;
+// seq が逆行していても t_ms がこれ以上新しければタグ再起動とみなして受理する
+constexpr uint64_t kRebootGapMs = 5000;
 
 class TagPipeline {
 public:
@@ -61,8 +63,9 @@ public:
     PosOut process(uint32_t seq, uint64_t t_ms, uint64_t recv_ms, const RangeMeas* meas,
                    int n_meas) {
         PosOut out;
-        // ① 検証
-        if (has_seq_ && seq <= last_seq_) {
+        // ① 検証。seq 逆行はタグ再起動 (t_ms が kRebootGapMs 以上新しい) なら受理する。
+        if (has_seq_ && seq <= last_seq_ &&
+            (!has_t_ || t_ms - last_t_ms_ < kRebootGapMs)) {
             return out;
         }
         if (recv_ms > t_ms && real(recv_ms - t_ms) > tuning_.max_age_ms) {

@@ -4,6 +4,10 @@
 
 M5Stack Stamp UWB (Qorvo QM33120W) + Stamp C5 による屋内 2D RTLS(リアルタイム測位システム)。
 
+![RTLS フロアマップ UI(仮想タグ3台によるライブ動作)](docs/assets/rtls-ui.gif)
+
+*可視化 UI の動作例(実機レス: 仮想タグ3台 + シミュレータ)。タグの現在位置と軌跡、使用アンカーへの接続線、外れ値除去で棄却された測距の赤破線フラッシュ、真値オーバーレイ(白抜き丸)、アンカー別欠測率とタグ別誤差の監視パネル。*
+
 - 設計書: [docs/rtls-design.md](docs/rtls-design.md)(基本設計)ほか [docs/](docs/) 配下
   - 測位サーバー(A案): [server-design.md](docs/server-design.md) / タグ上計算(B案): [tag-design.md](docs/tag-design.md)
   - 測距方式: [DS-TWR](docs/ds-twr-design.md)(採用)/ [SS-TWR](docs/ss-twr-design.md)(予備)/ [TDoA](docs/tdoa-design.md)(将来)

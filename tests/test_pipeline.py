@@ -92,3 +92,16 @@ def test_lost_then_reacquire(config):
     pos = pl.process(make_rangeset(config, 1, 10, 30_000, 20.0, 20.0))
     assert pos is not None
     assert math.hypot(pos.x_m - 20.0, pos.y_m - 20.0) < 0.1
+
+
+def test_tag_reboot_seq_reset_accepted(config):
+    """タグ再起動で seq が 1 に戻っても、t_ms が十分新しければ受理される。"""
+    pl = TagPipeline(0x0001, config, CellManager(config))
+    for i in range(5):
+        pl.process(make_rangeset(config, 1, seq=100 + i, t_ms=1000 + i * 500, x=10.0, y=8.0))
+    # 6 秒後に seq=1 で再開 (再起動) → 受理され追尾が続く
+    pos = pl.process(make_rangeset(config, 1, seq=1, t_ms=10_000, x=11.0, y=8.0))
+    assert pos is not None
+    assert math.hypot(pos.x_m - 11.0, pos.y_m - 8.0) < 0.5
+    # 直後の seq 逆行 (同一 t_ms 帯) は従来どおり破棄
+    assert pl.process(make_rangeset(config, 1, seq=1, t_ms=10_500, x=11.0, y=8.0)) is None

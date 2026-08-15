@@ -16,7 +16,7 @@ dependencies = [
 
 [project.optional-dependencies]
 mqtt = ["aiomqtt>=2.0"]
-web = ["fastapi>=0.110", "uvicorn>=0.29"]
+web = ["fastapi>=0.110", "uvicorn>=0.29", "websockets>=12"]
 
 [dependency-groups]
 dev = ["pytest>=8.0", "httpx2"]
