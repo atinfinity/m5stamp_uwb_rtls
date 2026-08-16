@@ -1,6 +1,7 @@
 // rtls_common.h — 全ノード共有の定数(ピン・アドレス・タイミング)
 // 基本設計 rtls-design.md §4.2 / ds-twr-design.md §3 に対応。
-// タイミング初期値は公式サンプル準拠。Step 1 の実測後にここで確定させる。
+// タイミング初期値は M5Stack 公式サンプル(MIT)の DS_TWR_TAG/ANCHOR・SS_TWR_TAG/ANCHOR 準拠
+// (https://github.com/m5stack/M5Stamp-UWB/tree/main/examples)。Step 1 の実測後にここで確定させる。
 #pragma once
 
 #include <cstdint>
