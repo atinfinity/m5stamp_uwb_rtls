@@ -1,0 +1,92 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 920 540" font-family="'Hiragino Sans', 'Noto Sans JP', Helvetica, Arial, sans-serif">
+  <defs>
+    <clipPath id="room-clip">
+      <rect x="60" y="90" width="460" height="340"/>
+    </clipPath>
+  </defs>
+
+  <!-- background (explicit, so the figure stays readable in GitHub dark mode) -->
+  <rect x="0" y="0" width="920" height="540" rx="8" fill="#ffffff" stroke="#d0d7de"/>
+
+  <!-- title -->
+  <text x="460" y="38" text-anchor="middle" font-size="20" font-weight="bold" fill="#24292f">屋内 UWB 測位のイメージ(アンカー設置とタグ測位)</text>
+
+  <!-- room (top view) -->
+  <rect x="60" y="90" width="460" height="340" fill="#f6f8fa" stroke="#57606a" stroke-width="3"/>
+  <text x="290" y="78" text-anchor="middle" font-size="13" fill="#57606a">セル(15〜25 m 四方)— 上面図</text>
+
+  <!-- range circles (radius = measured distance, all passing through the tag) -->
+  <g clip-path="url(#room-clip)" fill="none" stroke="#9db9e8" stroke-width="1.5" stroke-dasharray="6 5">
+    <circle cx="60"  cy="90"  r="330.2"/>
+    <circle cx="520" cy="90"  r="268.7"/>
+    <circle cx="520" cy="430" r="242.1"/>
+    <circle cx="60"  cy="430" r="308.9"/>
+  </g>
+
+  <!-- ranging lines tag -> anchors -->
+  <g stroke="#1f6feb" stroke-width="1.5">
+    <line x1="330" y1="280" x2="60"  y2="90"/>
+    <line x1="330" y1="280" x2="520" y2="90"/>
+    <line x1="330" y1="280" x2="520" y2="430"/>
+    <line x1="330" y1="280" x2="60"  y2="430"/>
+  </g>
+  <g font-size="14" font-style="italic" fill="#1f6feb">
+    <text x="186" y="180">d1</text>
+    <text x="428" y="180">d2</text>
+    <text x="428" y="368">d3</text>
+    <text x="186" y="368">d4</text>
+  </g>
+
+  <!-- anchors at the four corners -->
+  <g fill="#1f6feb" stroke="#0b3d91" stroke-width="1.5">
+    <rect x="51"  y="81"  width="18" height="18"/>
+    <rect x="511" y="81"  width="18" height="18"/>
+    <rect x="511" y="421" width="18" height="18"/>
+    <rect x="51"  y="421" width="18" height="18"/>
+  </g>
+  <g font-size="14" font-weight="bold" fill="#24292f">
+    <text x="78"  y="115">A1</text>
+    <text x="482" y="115">A2</text>
+    <text x="482" y="416">A3</text>
+    <text x="78"  y="416">A4</text>
+  </g>
+  <text x="60" y="466" font-size="12" fill="#57606a">アンカー: 壁面・柱の高さ 1.8〜2.5 m に設置(USB 給電、座標は測量して登録)</text>
+
+  <!-- tag -->
+  <circle cx="330" cy="280" r="9" fill="#e5534b" stroke="#a40e26" stroke-width="1.5"/>
+  <g font-size="14" font-weight="bold" fill="#a40e26" text-anchor="middle" stroke="#ffffff" stroke-width="4" paint-order="stroke">
+    <text x="330" y="310">タグ(人・物に装着)</text>
+    <text x="330" y="328">高さ ~1.0 m</text>
+  </g>
+
+  <!-- legend -->
+  <g font-size="12" fill="#24292f">
+    <rect x="60" y="486" width="13" height="13" fill="#1f6feb" stroke="#0b3d91"/>
+    <text x="79" y="497">アンカー(Stamp C5 + Stamp UWB)</text>
+    <circle cx="316" cy="492" r="6.5" fill="#e5534b" stroke="#a40e26"/>
+    <text x="328" y="497">タグ</text>
+    <line x1="368" y1="492" x2="404" y2="492" stroke="#9db9e8" stroke-width="1.5" stroke-dasharray="6 5"/>
+    <text x="410" y="497">測距で得た距離(半径 = d)</text>
+  </g>
+
+  <!-- explanation panel -->
+  <g>
+    <rect x="560" y="70" width="330" height="200" rx="6" fill="#f6f8fa" stroke="#d0d7de"/>
+    <text x="576" y="98" font-size="15" font-weight="bold" fill="#24292f">測位の仕組み</text>
+    <text x="576" y="126" font-size="13" fill="#24292f">1. タグが各アンカー A1〜A4 へ順次</text>
+    <text x="592" y="144" font-size="13" fill="#24292f">DS-TWR 測距し、距離 d1〜d4 を取得</text>
+    <text x="576" y="172" font-size="13" fill="#24292f">2. 各アンカーを中心とする半径 d の円の</text>
+    <text x="592" y="190" font-size="13" fill="#24292f">交点がタグ位置</text>
+    <text x="576" y="218" font-size="13" fill="#24292f">3. 距離セット {d1…d4} から最小二乗法で</text>
+    <text x="592" y="236" font-size="13" fill="#24292f">2D 座標 (x, y) を推定</text>
+  </g>
+  <g>
+    <rect x="560" y="290" width="330" height="140" rx="6" fill="#fff8f0" stroke="#e8d5b5"/>
+    <text x="576" y="318" font-size="15" font-weight="bold" fill="#24292f">設置のポイント</text>
+    <text x="576" y="346" font-size="13" fill="#24292f">・1 セルあたり 4 台を矩形の四隅に配置</text>
+    <text x="576" y="368" font-size="13" fill="#24292f">・広いフロアはセル分割し、隣接セルと</text>
+    <text x="592" y="386" font-size="13" fill="#24292f">アンカーを共有(8〜12 台で 50 m 級)</text>
+    <text x="576" y="408" font-size="13" fill="#24292f">・タグとの高低差 Δz は解算時に水平距離</text>
+    <text x="592" y="426" font-size="13" fill="#24292f">へ補正(√(d² − Δz²))</text>
+  </g>
+</svg>
