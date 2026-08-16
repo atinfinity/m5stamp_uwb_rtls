@@ -6,6 +6,7 @@ build-backend = "setuptools.build_meta"
 name = "m5stamp-uwb-rtls-server"
 version = "0.1.0"
 description = "Positioning server (Plan A) for M5Stamp UWB RTLS"
+license = {text = "Apache-2.0"}
 requires-python = ">=3.11"
 dependencies = [
     "numpy>=1.26",
