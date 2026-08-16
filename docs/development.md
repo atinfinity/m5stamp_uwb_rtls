@@ -13,7 +13,7 @@
 | ffmpeg | デモ GIF の生成(任意) | `brew install ffmpeg` | `sudo apt install ffmpeg` |
 | gh | Issue/PR 操作(任意) | `brew install gh` | [cli.github.com](https://cli.github.com/) |
 
-Python 本体は uv が自動で用意する(`requires-python >= 3.11`。3.14 で動作確認済み)。
+Python 本体は uv が自動で用意する(`requires-python >= 3.12`。3.14 で動作確認済み)。
 
 ## 2. セットアップ
 

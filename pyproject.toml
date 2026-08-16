@@ -6,7 +6,7 @@ build-backend = "setuptools.build_meta"
 name = "m5stamp-uwb-rtls-server"
 version = "0.1.0"
 description = "Positioning server (Plan A) for M5Stamp UWB RTLS"
-requires-python = ">=3.11"
+requires-python = ">=3.12"
 dependencies = [
     "numpy>=1.26",
     "scipy>=1.11",
