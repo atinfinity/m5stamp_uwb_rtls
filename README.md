@@ -55,3 +55,9 @@ uv run python tools/virtual_tag.py                        # 仮想タグ 3 台 (
 ## 実機作業(要ハードウェア)
 
 Step 1 の DS-TWR 実測手順は [firmware/README.md](firmware/README.md) を参照。実測値の反映先は Issue #1 のチェックリストにまとめてある。
+
+## ライセンス
+
+[Apache License 2.0](LICENSE)
+
+ファームウェアのビルド時に取得される [M5Stamp-UWB ライブラリ](https://github.com/m5stack/M5Stamp-UWB)(MIT。同梱の Qorvo QM33120W ドライバは Qorvo 独自ライセンス)など、依存ライブラリはそれぞれのライセンスに従う。
