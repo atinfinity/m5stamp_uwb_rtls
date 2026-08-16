@@ -14,6 +14,7 @@ M5Stack Stamp UWB (Qorvo QM33120W) + Stamp C5 による屋内 2D RTLS(リアル�
 - 設計書: [docs/rtls-design.md](docs/rtls-design.md)(基本設計)ほか [docs/](docs/) 配下
   - 測位サーバー(A案): [server-design.md](docs/server-design.md) / タグ上計算(B案): [tag-design.md](docs/tag-design.md)
   - 測距方式: [DS-TWR](docs/ds-twr-design.md)(採用)/ [SS-TWR](docs/ss-twr-design.md)(予備)/ [TDoA](docs/tdoa-design.md)(将来)
+- ハードウェア: [docs/hardware.md](docs/hardware.md)(想定ハードウェアリスト・組み立て図)
 - ファームウェア: [firmware/](firmware/)(Step 1: DS-TWR 1対1計測 — Issue #1)
 - 測位サーバー: [server/](server/)(実機レスで開発可能 — Issue #3)
 - 開発ガイド: [環境構築](docs/development.md) / [構成カスタマイズ(アンカー・タグ)](docs/configuration.md) / [測位アルゴリズム開発](docs/algorithm-guide.md) / [アプリケーション開発](docs/application-guide.md)([examples/](examples/) にサンプルあり)

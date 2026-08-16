@@ -35,7 +35,7 @@ Issue [#1](https://github.com/atinfinity/m5stamp_uwb_rtls/issues/1) / 設計: [d
 
 ## ハードウェア準備
 
-- M5Stamp C5 + Stamp UWB F を **2 セット**。各セットは付属の 0.5mm-12P FPC ケーブルで直結(ピン割当は自動で `rtls_common.h` と一致)
+- M5Stamp C5 + Stamp UWB F を **2 セット**。各セットは付属の 0.5mm-12P FPC ケーブルで直結(ピン割当は自動で `rtls_common.h` と一致)。組み立ての詳細は [docs/hardware.md](../docs/hardware.md) を参照
 - 両ノード USB-C で PC へ接続(タグ側は計測ログの採取にシリアルを使う)
 - アンテナ端が金属・机面に近づかないよう治具等で浮かせる(基本設計 §3.3)
 
