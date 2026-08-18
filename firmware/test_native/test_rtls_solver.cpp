@@ -1,4 +1,4 @@
-// rtls_solver のホストネイティブテスト (server-design.md §13-1 と同一ケース)。
+// rtls_solver のホストネイティブテスト (server-design.md §13 の 1. と同一ケース)。
 // 実行: ./firmware/test_native/run.sh
 #include <cassert>
 #include <cmath>

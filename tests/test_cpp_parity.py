@@ -1,4 +1,4 @@
-"""C++ ソルバー (rtls_solver) と Python 実装の一致試験 (tag-design.md §10-2)。
+"""C++ ソルバー (rtls_solver) と Python 実装の一致試験 (tag-design.md §10 の 2.)。
 
 シミュレータ出力を両実装のパイプラインへ通し、エポックごとに座標・状態を
 突き合わせる。C++ 側は firmware/test_native/parity_main.cpp をビルドして実行。
@@ -82,7 +82,7 @@ def test_cpp_python_parity(config, tmp_path):
     print(f"parity: n={n} median={median * 1000:.2f} mm "
           f"p99={p99 * 1000:.2f} mm max={diffs[-1] * 1000:.2f} mm "
           f"state_mismatch={state_mismatch}")
-    # tag-design.md §10-2: 一致許容 1 cm (中央値)。ソルバーの反復条件差・
+    # tag-design.md §10 の 2.: 一致許容 1 cm (中央値)。ソルバーの反復条件差・
     # float/double 差があるため、p99 は 2 cm・最大 10 cm を許容する。
     assert median <= 0.01
     assert p99 <= 0.02

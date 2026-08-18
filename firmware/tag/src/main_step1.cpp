@@ -16,7 +16,7 @@
 //   exchange_us requestDSRange() 呼出し全体の実測時間 [µs](ホスト処理込み)
 //   err         失敗時のエラー名(成功時 "-")
 //
-// ds-twr-design.md §6-1/§6-2(静的精度・タイミング実測)に対応。
+// ds-twr-design.md §6 の 1./2.(静的精度・タイミング実測)に対応。
 #include <Arduino.h>
 #include <M5Stamp_UWB.h>
 #include <rtls_common.h>

@@ -1,4 +1,4 @@
-// parity_main — Python 一致試験用ハーネス (tag-design.md §10-2)
+// parity_main — Python 一致試験用ハーネス (tag-design.md §10 の 2.)
 //
 // 使い方: parity <anchors.txt> <ranges.jsonl>
 //   anchors.txt: 1 行目 "tag_height <m>"、以降 "<hex addr> <x> <y> <z> <bias_mm>"

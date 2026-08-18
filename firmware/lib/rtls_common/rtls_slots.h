@@ -18,7 +18,7 @@ constexpr int slotIndexForTag(uint16_t tag_addr, uint16_t tag_addr_base) {
     return static_cast<int>(tag_addr - tag_addr_base);
 }
 
-// epoch_ms (SNTP 同期済み壁時計) が自スロットの有効窓内か
+// epoch_ms (SNTP 同期済みの実時刻) が自スロットの有効窓内か
 constexpr bool inSlot(uint64_t epoch_ms, int slot_idx) {
     const uint32_t pos = static_cast<uint32_t>(epoch_ms % kSuperframeMs);
     const uint32_t start = static_cast<uint32_t>(slot_idx) * kSlotPeriodMs;

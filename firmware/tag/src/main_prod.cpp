@@ -1,7 +1,7 @@
 // タグ FW 本番モード (Step 2/3 + B案タグ上計算, Issue #6/#28)
 //
 // 動作 (rtls-design.md §4.4, §4.9 / tag-design.md §2〜§7):
-//   - Wi-Fi + SNTP (5 分毎スムーズ補正) で壁時計を持ち、TDMA スロットで測距
+//   - Wi-Fi + SNTP (5 分毎スムーズ補正) で実時刻を持ち、TDMA スロットで測距
 //   - rtls/config/anchors・rtls/config/tuning (retained, version 付き) を受信して
 //     NVS へ永続化し、rtls_solver によるタグ上解算とオンボードセル選択を行う
 //   - 動作モード (NVS 永続、シリアルコマンド "mode <M>" で切替):

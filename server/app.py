@@ -1,7 +1,7 @@
 """測位サーバー本体 (server-design.md §3, §7, §11)。
 
-MQTT 受信 → recorder → pipeline → position 出版 / WebSocket 配信 /
-セルハンドオーバー (anchors retained 出版) を単一プロセス asyncio で行う。
+MQTT 受信 → recorder → pipeline → position publish / WebSocket 配信 /
+セルハンドオーバー (anchors retained publish) を単一プロセス asyncio で行う。
 
 使い方:
     python -m server.app --config server/config.yaml [--http-port 8000]
@@ -136,7 +136,7 @@ class RtlsServer:
                 f"rtls/tag/0x{pos.tag:04X}/position", pos.to_json(), qos=0)
 
     async def _maybe_handover(self, tag: int, cell: str) -> None:
-        """セルが変わったときのみ担当アンカーリストを retained 出版する。"""
+        """セルが変わったときのみ担当アンカーリストを retained publish する。"""
         if not cell or self._published_cell.get(tag) == cell or self._client is None:
             return
         anchors = [f"0x{a:04X}" for a in self.cells.anchors_of(cell)]

@@ -4,7 +4,7 @@
 tdoa-design.md §3.2 の「リファレンスアンカー方式」のオフライン版:
 マスターブリンクを 2 台のリスナーで受信したログから、リスナー間の
 クロック offset / drift を推定し、補正後の残留誤差 σ を算出する。
-σ < 2 ns (≈ 60 cm) が PoC-2 の目標 (§6-2)。1 ns ≈ 30 cm。
+σ < 2 ns (≈ 60 cm) が PoC-2 の目標 (tdoa-design.md §6 の 2.)。1 ns ≈ 30 cm。
 
 使い方:
     uv run python tools/tdoa/sync_analysis.py anchorA.csv anchorB.csv \
