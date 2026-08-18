@@ -3,7 +3,7 @@
 - 作成日: 2026-08-15
 - ステータス: ドラフト(実装前レビュー用)
 - 上位文書: [rtls-design.md](rtls-design.md)(基本設計 §5 の「B案: タグ上計算」の詳細設計)
-- 姉妹文書: [server-design.md](server-design.md)(A案。解算アルゴリズムは本書と共通仕様)
+- 関連文書: [server-design.md](server-design.md)(A案。解算アルゴリズムは本書と共通仕様)
 
 ## 1. スコープと位置づけ
 
@@ -158,7 +158,7 @@ MQTT の実送信は `net_task` が非同期に行い、**スロット時間を 
 |---|---|---|
 | 0 | uint8×2 | ヘッダ `0xB5 0x50` |
 | 2 | uint8 | tag_id |
-| 3 | uint8 | state (0=INIT,1=TRACKING,2=COASTING,3=STALE) |
+| 3 | uint8 | state (0=INIT,1=TRACKING,2=COASTING,3=STALE,4=LOST) |
 | 4 | uint32 | t_ms(SNTP 同期時刻の下位 32bit) |
 | 8 | float×4 | x_m, y_m, vx_ms, vy_ms |
 | 24 | float | residual_m |
@@ -189,7 +189,7 @@ MQTT の実送信は `net_task` が非同期に行い、**スロット時間を 
 
 ## 10. テスト計画
 
-1. **ホスト単体テスト(`env:native`、実機不要)**: server-design.md §13-1 と同一ケース(合成ジオメトリ、NLoS 注入、軌跡追従、縮退配置)を C++ 側でも実行。
+1. **ホスト単体テスト(`env:native`、実機不要)**: server-design.md §13 の 1. と同一ケース(合成ジオメトリ、NLoS 注入、軌跡追従、縮退配置)を C++ 側でも実行。
 2. **Python 一致試験**: A案シミュレータの ranges JSONL をホストビルドの solver に入力し、Python 実装の positions と突き合わせる。許容差: **中央値 ≤ 1 cm・p99 ≤ 2 cm・最大 ≤ 10 cm**(外れ値除去が発火するエポックは scipy soft_l1 と IRLS Gauss-Newton の反復差が cm 級で現れるため。実測: 中央値 0.0 mm / p99 0.34 mm / 最大 16.9 mm、状態一致 100%)。**以後、アルゴリズム変更は必ず両実装同時に行う**ことをルール化。
 3. **実機タイミング試験**: スロット内の各処理時間(測距×4、解算、出力)を `esp_timer` で計測し、§6 の時間予算表を実測値で更新。90 ms に収まらない場合はリトライ回数かアンカー数を調整。
 4. **断線試験**: Wi-Fi AP 停止 → STANDALONE 動作(UART 出力継続)→ 復帰後の MQTT 再接続と config version 追従を確認。
@@ -203,8 +203,8 @@ MQTT の実送信は `net_task` が非同期に行い、**スロット時間を 
 
 ## 12. 実装順序
 
-1. `rtls_solver`(ヘッダオンリー)+ `env:native` 単体テスト — A案 §15-2 の Python 実装と並走
-2. Python 一致試験(§10-2)の整備
+1. `rtls_solver`(ヘッダオンリー)+ `env:native` 単体テスト — A案 §15 の 2. の Python 実装と並走
+2. Python 一致試験(§10 の 2.)の整備
 3. `ranging.cpp` の TDMA 化(基本設計 Step 3 と共通作業)
 4. `config_store` + `rtls/config/#` 配布フロー
 5. `output`(MQTT HYBRID → UART)+ 実機タイミング試験

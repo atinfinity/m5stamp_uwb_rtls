@@ -23,7 +23,7 @@
 
 | 項目 | 選定 | 理由 |
 |---|---|---|
-| 言語 / ランタイム | Python 3.11+、単一プロセス asyncio | タグ5台×2Hz = 最大10 msg/s と負荷が軽く、プロセス分割は不要 |
+| 言語 / ランタイム | Python 3.12+、単一プロセス asyncio | タグ5台×2Hz = 最大10 msg/s と負荷が軽く、プロセス分割は不要 |
 | MQTT クライアント | aiomqtt | asyncio ネイティブ。再接続ループを自前で書ける |
 | 数値計算 | numpy / scipy | 線形化 LSQ と `scipy.optimize.least_squares` |
 | 設定・検証 | pydantic v2 + YAML | `config.yaml` と受信 JSON のスキーマ検証を同じ機構で行う |
@@ -38,7 +38,7 @@ server/
 ├── app.py                  # エントリポイント: 各タスクの起動・停止
 ├── config.py               # config.yaml の読込・pydantic 検証
 ├── models.py               # RangeSet / Position / TagState 等のデータ型
-├── mqtt_io.py              # aiomqtt の購読/出版ラッパ(再接続込み)
+├── mqtt_io.py              # aiomqtt の購読/publish ラッパ(再接続込み)
 ├── positioning/
 │   ├── pipeline.py         # タグごとの解算パイプライン(本書 §5)
 │   ├── geometry.py         # 高低差補正・線形化LSQ・非線形リファイン
@@ -207,8 +207,8 @@ stateDiagram-v2
 | トピック | 方向 | QoS | retain | 備考 |
 |---|---|---|---|---|
 | `rtls/tag/+/ranges` | 購読 | 0 | — | 欠測許容データ。QoS1 の再送はかえって古いデータを運ぶため使わない |
-| `rtls/tag/{id}/position` | 出版 | 0 | false | 外部連携用。UI は WebSocket 経由が主 |
-| `rtls/tag/{id}/anchors` | 出版 | 1 | **true** | ハンドオーバー指示。確実に届け、新規接続タグにも即配信 |
+| `rtls/tag/{id}/position` | publish | 0 | false | 外部連携用。UI は WebSocket 経由が主 |
+| `rtls/tag/{id}/anchors` | publish | 1 | **true** | ハンドオーバー指示。確実に届け、新規接続タグにも即配信 |
 | `rtls/anchor/+/status` | 購読 | 0 | — | heartbeat(任意)。monitor へ転送 |
 
 再接続: 指数バックオフ(1→2→…→30 s 上限)で永続リトライ。切断中の ranges は捨てる(リアルタイム性優先)。
@@ -228,11 +228,14 @@ stateDiagram-v2
 | `GET /api/stats` | アンカー別測距成功率、タグ別更新レート、破棄カウンタ |
 | `WS /ws` | Position と統計の push 配信(下記スキーマ) |
 
-WebSocket 配信メッセージ:
+WebSocket 配信メッセージ(MQTT の position ペイロードに `"type":"position"` を加えた形):
 
 ```json
-{"type":"position","tag":1,"x_m":12.34,"y_m":8.76,"cell":"A",
- "state":"TRACKING","residual_m":0.08,"n_used":4,"t_ms":1755212345690}
+{"type":"position","tag":"0x0001","t_ms":1755212345690,
+ "x_m":12.34,"y_m":8.76,"vx_ms":0.51,"vy_ms":-0.12,
+ "quality":{"n_anchors":4,"residual_m":0.03},
+ "anchors_used":["0x0010","0x0011","0x0013","0x0014"],"anchors_rejected":[],
+ "cell":"A","state":"TRACKING"}
 ```
 
 UI(`web/static/`、単一 HTML + Canvas):フロア平面図にアンカー(●)、セル境界、タグ(現在位置+直近 30 秒の軌跡)、状態色(TRACKING=通常 / COASTING・STALE=警告 / LOST=非表示+一覧に警告)。追加ライブラリなしの素の Canvas 描画とする。
@@ -297,7 +300,7 @@ sequenceDiagram
 
 | 事象 | 検出 | 応答 |
 |---|---|---|
-| 不正 JSON / スキーマ違反 | pydantic 検証失敗 | 破棄、タグ別カウンタ加算(UI の /api/stats に露出) |
+| 不正 JSON / スキーマ違反 | pydantic 検証失敗 | 破棄、タグ別カウンタ加算(UI の /api/stats で参照できる) |
 | 古いデータ | `recv_ms − t_ms > max_age_ms` | 破棄。多発時は SNTP ずれ警告(タグ時刻とサーバー時刻の差を統計表示) |
 | アンカー欠測率上昇 | 直近 5 分の ok=false 率 > 30% | UI 警告(設置物による遮蔽・電源断の兆候) |
 | タグ無応答 | STALE / LOST 遷移 | UI 警告 / 非表示。LOST タグへ初期取得用アンカーリスト配信 |
@@ -309,8 +312,8 @@ sequenceDiagram
    - `geometry`: 既知の合成ジオメトリ(真値座標+ノイズ付き距離)で誤差 < 数 cm を検証。共線配置・n=3 の縮退ケースを含める。
    - `outlier`: 1 距離に +1〜3 m の NLoS バイアスを注入し、除去が働き解が復元されることを検証。
    - `kalman`: 直線・停止・折返し軌跡の合成データで RMS 誤差と COASTING 挙動を検証。
-   - `cells`: 境界往復でヒステリシスが働き配信が 1 回に抑まることを検証。
-2. **合成シミュレータ**: 真値軌跡(歩行モデル)→ 距離生成(ガウスノイズ σ=0.05 m + 確率的 NLoS バイアス + 欠測率)→ ranges JSONL を出力するツールを `tools/simulate/` に置き、**実機なしで end-to-end(リプレイ経由)を回す**。
+   - `cells`: 境界往復でヒステリシスが働き、配信が 1 回に抑えられることを検証。
+2. **合成シミュレータ**: 真値軌跡(歩行モデル)→ 距離生成(ガウスノイズ σ=0.05 m + 確率的 NLoS バイアス + 欠測率)→ ranges JSONL を出力するツールを `tools/simulate.py` に置き、**実機なしで end-to-end(リプレイ経由)を回す**。
 3. **リプレイ回帰**: 実機で採取したログを `tests/fixtures/` に保存し、パラメータ変更時の CEP50 / CEP95 / 軌跡 RMS を比較するスクリプトで劣化を検知。
 4. **受入基準**(基本設計 §6 と同一): 見通し静置で CEP50 ≤ 0.30 m、歩行時に軌跡破綻(1 エポックで 2 m 超のジャンプ)なし、ハンドオーバー時の位置飛びなし。
 
@@ -320,13 +323,13 @@ sequenceDiagram
 |---|---|
 | 入力レート | 最大 5 タグ × 2 Hz = 10 msg/s |
 | 解算 1 回の計算量 | 4×2 の LSQ + 反復 ≈ 数百 µs(Python でも余裕) |
-| 追加レイテンシ | 受信→position 出版まで p95 < 10 ms 目標(Wi-Fi/ブローカー分は別途 +10〜50 ms) |
+| 追加レイテンシ | 受信→position publish まで p95 < 10 ms 目標(Wi-Fi/ブローカー分は別途 +10〜50 ms) |
 | ログ容量 | ≈ 15 MB/日(JSONL、5 タグ時)。30 日で 0.5 GB — ローテーションのみで十分 |
 | 対応上限 | 本設計のまま 20 タグ × 5 Hz 程度までスケール可(ボトルネックは UWB エアタイム側) |
 
 ## 15. 実装順序
 
-1. `models.py` + `config.py` + 合成シミュレータ(§13-2)— 実機なしで開発ループを確立
+1. `models.py` + `config.py` + 合成シミュレータ(§13 の 2.)— 実機なしで開発ループを確立
 2. `geometry` / `outlier` / `kalman` + 単体テスト
 3. `pipeline` + `replay` — シミュレータ出力で end-to-end 検証
 4. `mqtt_io` + `recorder` — 実機(基本設計ロードマップ Step 2)と結合

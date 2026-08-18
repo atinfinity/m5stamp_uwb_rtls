@@ -6,7 +6,7 @@
 
 ## 1. 取得インターフェースの選択
 
-| インターフェース | 向き先 | 特徴 |
+| インターフェース | 主な用途 | 特徴 |
 |---|---|---|
 | **MQTT** `rtls/tag/{addr}/position` | 機械間連携・常駐アプリ(推奨) | push 型、購読者をいくつでも追加可、QoS0・retain なし |
 | WebSocket `ws://<server>:8000/ws` | Web UI・ダッシュボード | position / stats(2秒毎)/ truth(開発時)の3種を push |
@@ -50,7 +50,7 @@
 
 クリティカルな判定(入退場、衝突警告など)は `state == "TRACKING"` かつ
 `residual_m` が閾値以下(目安 0.5 m)のエポックだけで行う。
-レイテンシは測距→position 出版まで実測 30〜60 ms 程度(Wi-Fi + ブローカー + 解算)。
+レイテンシ(測距から position の publish まで)は Wi-Fi + ブローカー + 解算で 20〜60 ms 程度の見積もり(server-design.md §14。実機では未計測)。
 
 ## 3. サンプルコード([examples/](../examples/))
 

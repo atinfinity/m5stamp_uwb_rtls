@@ -56,7 +56,7 @@ EOF
 ```
 
 劣悪条件での頑健性は `SimParams` を振って確認する(`tools/simulate.py --nlos-prob 0.2 --dropout-prob 0.1` 等)。
-チューニングのグリッド探索は **`tools/sweep.py`** で機械化できる
+チューニングのグリッド探索は **`tools/sweep.py`** で自動化できる
 (`--param tuning.residual_gate_m=0.3,0.5,0.7` の直積を一括評価し CEP 表を出力。真値なしの実測ログにも対応)。
 テストスイートにも同じ回帰が入っている: `uv run pytest tests/test_e2e_replay.py -s`(CEP を print する)。
 
@@ -93,7 +93,7 @@ pipeline の入出力型(`RangeSet` → `Position`)を保てばサーバー側(M
 ## 4. 品質ゲート(変更を出す前に)
 
 ```bash
-uv run pytest                     # 30 テスト: 単体 + e2e 回帰 + C++ 一致試験
+uv run pytest                     # 単体 + e2e 回帰 + C++ 一致試験
 ./firmware/test_native/run.sh     # C++ 側の単体テスト
 ```
 
@@ -103,18 +103,18 @@ NLoS 20% でも CEP50 ≤ 0.5 m。現状の実力は CEP50 ≈ 4–5 cm なの�
 ## 5. Python / C++ 一致試験のルール
 
 `tests/test_cpp_parity.py` が同一入力に対する両実装の出力を突き合わせる
-(許容: 中央値 ≤ 1 cm・p99 ≤ 2 cm・最大 ≤ 10 cm・状態一致 ≥ 99%、tag-design.md §10-2)。
+(許容: 中央値 ≤ 1 cm・p99 ≤ 2 cm・最大 ≤ 10 cm・状態一致 ≥ 99%、tag-design.md §10 の 2.)。
 
 - **片側だけ変更すると CI が落ちる**。これは仕様(意図的なガード)
 - 正当な変更で許容値を超える場合: 両実装を修正 → 乖離を実測 → 妥当なら
-  tag-design.md §10-2 の許容値と test の閾値を実測値ベースで更新(コミットメッセージに根拠を書く)
+  tag-design.md §10 の 2. の許容値と test の閾値を実測値ベースで更新(コミットメッセージに根拠を書く)
 
 ## 6. 実測データでの開発(実機導入後)
 
 サーバーは受信した生距離を `logs/ranges-YYYYMMDD.jsonl` に常時記録している(recorder)。
 実測ログはそのまま §2 のリプレイに入る — **アルゴリズム変更の評価に実機の再測定は不要**。
 代表シーンのログを `tests/fixtures/` に置き、回帰テスト化するのが Step 2 以降の運用
-(server-design.md §13-3)。アンカー別バイアス校正は `config.yaml` の `bias_mm`(基本設計 §6)。
+(server-design.md §13 の 3.)。アンカー別バイアス校正は `config.yaml` の `bias_mm`(基本設計 §6)。
 
 ## チェックリスト
 
