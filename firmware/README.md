@@ -58,7 +58,7 @@ pio run -e tag_step1 -t upload
 > **注**: board 定義は汎用の `esp32-c5-devkitc-1` を使用している。書き込みに失敗する場合は
 > `pio device list` でポートを確認し、`upload_port` を明示すること。
 
-## 計測手順(ds-twr-design.md §6-1, §6-2)
+## 計測手順(ds-twr-design.md §6 の 1. と 2.)
 
 1. 既知距離(レーザー距離計で測定)にタグ・アンカーを設置(高さを揃える)
 2. タグのシリアルを capture.py で採取:
@@ -72,15 +72,16 @@ uv run --with pyserial python tools/step1/capture.py --port /dev/tty.usbmodemXXX
 4. 解析:
 
 ```bash
-python tools/step1/analyze.py logs/dist*.csv
+uv run python tools/step1/analyze.py logs/dist*.csv
 ```
 
 出力(成功率、bias、σ、交換時間 p50/p95/p99)を Issue #1 に記録し、以下を更新する:
 
 - `bias_mm` 校正値 → server 設計 §10 の config.yaml へ
 - 交換時間 p95 → 基本設計 §4.4 の TDMA スロット幅
-- `rtls_common.h` のタイミング定数(`responseTxDelayUus` を 3000→1500 µs に詰める実験は
-  `kDsResponseTxDelayUus` を変更して同手順で比較)
+- `rtls_common.h` のタイミング定数 — アンカーの応答遅延はライブラリ設定 `responseTxDelayUus` に
+  代入される定数 `kDsResponseTxDelayUus` で決まる。3000→1500 µs に詰める実験は、この定数を
+  変更して同手順で比較する
 
 ## SS-TWR 検証(Issue #14、ss-twr-design.md §4/§6)
 
@@ -90,7 +91,7 @@ DS-TWR の対照試験として、**同じ設置・同じ距離**で env を SS 
 cd firmware/anchor && pio run -e anchor_ss -t upload      # アンカーを SS 応答に
 cd ../tag && pio run -e tag_step1_ss -t upload            # タグを SS 計測に
 # capture.py / analyze.py は共通 (mode は CSV メタデータから自動判別)
-python tools/step1/analyze.py logs/ds_dist5m.csv logs/ss_dist5m.csv   # DS/SS を並べて比較
+uv run python tools/step1/analyze.py logs/ds_dist5m.csv logs/ss_dist5m.csv   # DS/SS を並べて比較
 ```
 
 判定(3 条件すべて満たしたら SS-TWR を予備方式として有効化):
@@ -102,7 +103,7 @@ python tools/step1/analyze.py logs/ds_dist5m.csv logs/ss_dist5m.csv   # DS/SS �
 | ③ | リプレイで CEP50 ≤ 30 cm 維持 | Step 2 以降のログで確認 |
 
 - bias は方式ごとに異なりうるため、**DS/SS 別々に校正値を記録**する
-- 温度依存(始動直後 vs 30 分後)も §6-1 に従い両方式で採取する
+- 温度依存(始動直後 vs 30 分後)も ss-twr-design.md §6 の 1. に従い両方式で採取する
 - 不成立の場合は実測値を ss-twr-design.md に追記して Issue #14 を close
 
 ## TDoA PoC(Issue #16、tdoa-design.md §6)
@@ -128,7 +129,7 @@ blink_tx 1 台 + listener 2 台(それぞれ PC にシリアル接続し CSV を
 
 ```bash
 uv run python tools/tdoa/sync_analysis.py anchorA.csv anchorB.csv
-# → クロック offset/drift 推定と残留 σ。判定: σ < 2 ns (≈ 60 cm 相当, tdoa-design.md §6-2)
+# → クロック offset/drift 推定と残留 σ。判定: σ < 2 ns (≈ 60 cm 相当, tdoa-design.md §6 の 2.)
 # タグ模擬の blink_tx (addr を 0x0001 に変更) を追加した場合:
 uv run python tools/tdoa/sync_analysis.py anchorA.csv anchorB.csv --tag-src 0x0001
 ```

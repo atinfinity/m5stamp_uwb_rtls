@@ -2,7 +2,7 @@
 
 本システムで想定しているハードウェアの一覧と、ノード(アンカー・タグ)の組み立て方をまとめる。設計上の根拠(選定理由・BOM 概算・配置設計)は基本設計 [rtls-design.md](rtls-design.md) §3 を参照。
 
-数量は**タグ 1 台 + アンカー 1 台**の最小構成(DS-TWR 1 対 1 測距 = [firmware/README.md](../firmware/README.md) Step 1 相当)で記載する。2D 測位には 1 セルあたりアンカー 4 台が必要で、実運用の数量(アンカー 8〜12 + タグ 2〜5)と価格概算は [rtls-design.md](rtls-design.md) §3.1〜3.3 を参照。
+数量は**タグ 1 台 + アンカー 1 台**の最小構成(DS-TWR 1 対 1 測距 = [firmware/README.md](../firmware/README.md) Step 1 相当)で記載する。2D 測位には 1 セルあたりアンカー 4 台が標準(解算だけなら 3 台が下限)で、実運用の数量(アンカー 8〜12 + タグ 2〜5)と価格概算は [rtls-design.md](rtls-design.md) §3.1〜3.3 を参照。
 
 ## 1. 想定ハードウェアリスト
 
@@ -36,7 +36,7 @@
 
 ## 2. 組み立て図
 
-Stamp C5 と Stamp UWB F は、UWB F 付属の **0.5mm-12P FPC ケーブル 1 本**で直結する。FPC に SPI 5 線+制御 2 線+電源がまとまっており、Stamp C5 背面 FPC コネクタのピン割当が公式サンプルの想定(SCK=G12, MISO=G26, MOSI=G27, CS=G11, RST=G25, IRQ=G0)と一致しているため、**はんだ付け・配線作業は不要**。
+Stamp C5 と Stamp UWB F は、UWB F 付属の **0.5mm-12P FPC ケーブル 1 本**で直結する。FPC に SPI 5 線+制御 2 線+電源がまとまっており、Stamp C5 背面 FPC コネクタのピン割当が公式サンプルの想定(SCK=G12, MISO=G26, MOSI=G27, CS=G11, RST=G25, IRQ=G0, WAKEUP=G24, GP7=G23)と一致しているため、**はんだ付け・配線作業は不要**。
 
 ### 2.1 アンカーノード
 

@@ -26,7 +26,7 @@ uv sync --all-extras     # .venv 作成 + 全依存 (mqtt/web extras + dev グ�
 ## 3. テストを回す(CI と同じ内容)
 
 ```bash
-uv run pytest                     # Python 30 テスト (解算・セル・Web API・e2e 回帰・C++ 一致試験)
+uv run pytest                     # Python 全テスト (解算・セル・Web API・e2e 回帰・C++ 一致試験)
 ./firmware/test_native/run.sh     # FW 共通ロジック (スロット/JSON) + C++ ソルバーのホストテスト
 pio run -d firmware/anchor        # アンカー FW の ESP32-C5 ビルド (実機不要、初回はツールチェーン取得で数分)
 pio run -d firmware/tag           # タグ FW (本番 env:tag + 計測 env:tag_step1 の両方)
@@ -34,7 +34,7 @@ pio run -d firmware/tag           # タグ FW (本番 env:tag + 計測 env:tag_s
 
 - `uv run pytest` には **C++ 一致試験**(`tests/test_cpp_parity.py`)が含まれ、`c++` コンパイラを使って
   `firmware/lib/rtls_solver` をビルド・実行する。Python 実装と C++ 実装のどちらかだけを変更すると失敗する
-  (tag-design.md §10-2 のルールを CI が強制)。
+  (tag-design.md §10 の 2. のルールを CI が強制)。
 
 ## 4. ライブ実行(仮想タグで end-to-end)
 

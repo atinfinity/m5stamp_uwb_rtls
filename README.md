@@ -44,10 +44,12 @@ uv run python -m server.replay logs/sim_ranges.jsonl --out logs/positions.jsonl
 
 ## ライブ実行(仮想タグで end-to-end)
 
+サーバーと仮想タグは起動したまま動き続けるので、ターミナルを分けて実行する([docs/development.md](docs/development.md) §4):
+
 ```bash
 mosquitto &                                          # MQTT ブローカー (brew install mosquitto)
-uv run python -m server.app --config server/config.yaml   # 測位サーバー + Web UI
-uv run python tools/virtual_tag.py                        # 仮想タグ 3 台 (別ターミナル)
+uv run python -m server.app --config server/config.yaml   # 測位サーバー + Web UI (ターミナル 1)
+uv run python tools/virtual_tag.py                        # 仮想タグ 3 台 (ターミナル 2)
 ```
 
 ブラウザで http://localhost:8000 — フロアマップにタグ位置・軌跡・セルハンドオーバーがリアルタイム表示される。実機タグが用意できたら virtual_tag を実機に差し替えるだけで同じ経路が動く。
@@ -55,6 +57,20 @@ uv run python tools/virtual_tag.py                        # 仮想タグ 3 台 (
 ## 実機作業(要ハードウェア)
 
 Step 1 の DS-TWR 実測手順は [firmware/README.md](firmware/README.md) を参照。実測値の反映先は Issue #1 のチェックリストにまとめてある。
+
+## 用語集(ドキュメント頻出の略語)
+
+| 用語 | 意味 |
+|---|---|
+| CEP50 / CEP95 | 測位誤差の中央値 / 95 パーセンタイル(Circular Error Probable)。「CEP50 ≤ 0.30 m」= 半数の測位が誤差 30 cm 以内 |
+| LoS / NLoS | 見通しあり / 見通し外(Line of Sight)。遮蔽があると UWB の測距値は伸びる方向に狂う |
+| TWR(SS- / DS-) | Two-Way Ranging。電波の往復時間から 1 対 1 の距離を測る方式。SS = 片側往復、DS = 両側往復 |
+| TDoA | Time Difference of Arrival。複数アンカーの受信時刻差から測位する方式(将来方式) |
+| TDMA | 時分割多元接続。タグごとに送信時間帯(スロット)を割り当てて衝突を防ぐ |
+| DOP | 精度劣化指数(Dilution of Precision)。アンカー配置の幾何が悪いほど誤差が拡大する |
+| CFO | キャリア周波数オフセット(クロックずれ)。SS-TWR の成否を左右する([ss-twr-design.md](docs/ss-twr-design.md) §2.2) |
+| GT | Ground Truth(真値)。シミュレータが出力する正解位置。UI では ○ と点線で表示 |
+| IRLS | 反復再重み付け最小二乗。C++ ソルバーが scipy の代わりに使う近似解法 |
 
 ## ライセンス
 

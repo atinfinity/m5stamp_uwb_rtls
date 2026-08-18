@@ -47,7 +47,7 @@ ToF = (T_round1 × T_round2 − T_reply1 × T_reply2)
 タグ・アンカーの水晶に周波数偏差 e_T, e_A(各 ±20 ppm 程度)があっても、上式は**両側の往復を掛け合わせる対称形**のため、1 次のドリフト誤差が相殺される。残留誤差は近似的に
 
 ```
-err ≈ ToF × (e_T + e_A) / 2      (例: ToF 100 ns × 40 ppm → 4 fs ≈ 1 µm)
+err ≈ ToF × (e_T + e_A) / 2      (例: ToF 100 ns × 40 ppm / 2 = 2 ps → 距離換算 ≈ 0.6 mm)
 ```
 
 と無視できる。SS-TWR のように応答遅延 T_reply にドリフトが乗らないため、**µs 級のホスト処理遅延があっても精度が保たれる**。これがホスト MCU(Arduino ループ)経由で制御する本構成に DS-TWR が適する本質的な理由である。
@@ -69,13 +69,15 @@ err ≈ ToF × (e_T + e_A) / 2      (例: ToF 100 ns × 40 ppm → 4 fs ≈ 1 µ
 
 ### 3.3 タイミングパラメータ(公式サンプル準拠 → Step 1 実測で確定)
 
-| パラメータ | 初期値 | 説明 |
+| パラメータ(ライブラリ設定名 / 本プロジェクトの定数名) | 初期値 | 説明 |
 |---|---|---|
-| `response_delay` (アンカー) | 3000 µs | Poll 受信 → Response 送信の遅延。ホスト SPI 往復を吸収できる下限を実測で探る(サンプルは 1500〜3000 µs) |
-| `final_delay` (タグ) | 3000 µs | Response 受信 → Final 送信の遅延 |
-| RX タイムアウト | 3000 µs | 各受信待ちの上限 |
-| ホスト側ポーリングタイムアウト | 100 ms | `requestDSRange()` 全体の上限 |
+| `responseTxDelayUus` / `kDsResponseTxDelayUus`(アンカー) | 3000 µs | Poll 受信 → Response 送信の遅延。ホスト SPI 往復を吸収できる下限を実測で探る(サンプルは 1500〜3000 µs) |
+| `finalTxDelayUus` / `kDsFinalTxDelayUus`(タグ) | 1800 µs | Response 受信 → Final 送信の遅延 |
+| `rxTimeoutUus` / `kDsRxTimeoutUus` | 3000 µs | 各受信待ちの上限 |
+| `hostTimeoutMs` / `kDsHostTimeoutMs` | 100 ms | `requestDSRange()` 全体の上限 |
 | 1 交換の所要時間(見込み) | 5〜10 ms | ロードマップ Step 1 で実測し、TDMA スロット設計(基本設計 §4.4)を確定する |
+
+現在の確定値は `firmware/lib/rtls_common/rtls_common.h` の `kDs*` 定数を正とする(この定数がライブラリ設定の各フィールドへ代入される)。
 
 **遅延パラメータの方針**: 短くするほどエアタイムは減るが、ホスト(Arduino ループ+SPI)の応答ジッタでタイムアウト率が上がる。Step 1 で「成功率 99% を保てる最小値」を求め、`rtls_common` の共有ヘッダに定数として固定する。
 
@@ -90,7 +92,7 @@ err ≈ ToF × (e_T + e_A) / 2      (例: ToF 100 ns × 40 ppm → 4 fs ≈ 1 µ
 |---|---|---|
 | 測距ノイズ(LoS) | σ ≈ 5〜10 cm(仕様誤差 0.14 m) | カルマンフィルタで平滑化(server-design.md §5) |
 | アンテナ遅延オフセット | 数十 cm(個体差) | ノード別 `bias_mm` 校正(基本設計 §6) |
-| クロックドリフト | ~µm(§2.3 で相殺) | 対策不要 — DS-TWR の利点 |
+| クロックドリフト | < 1 mm(§2.3 で相殺) | 対策不要 — DS-TWR の利点 |
 | NLoS(遮蔽・マルチパス) | +0.3〜数 m(伸びる方向) | 残差ベース外れ値除去 + ゲーティング(server-design.md §5) |
 | 温度による遅延変動 | 数 cm | 定期再校正(季節単位)で十分 |
 | アンカー座標誤差 | 設置測量に依存 | ±3 cm 以内で測量(基本設計 §3.3) |

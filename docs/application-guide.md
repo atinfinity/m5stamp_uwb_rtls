@@ -50,7 +50,7 @@
 
 クリティカルな判定(入退場、衝突警告など)は `state == "TRACKING"` かつ
 `residual_m` が閾値以下(目安 0.5 m)のエポックだけで行う。
-レイテンシは測距→position 出版まで実測 30〜60 ms 程度(Wi-Fi + ブローカー + 解算)。
+レイテンシ(測距→position 出版)は Wi-Fi + ブローカー + 解算で 20〜60 ms 程度の見積もり(server-design.md §14。実機では未計測)。
 
 ## 3. サンプルコード([examples/](../examples/))
 

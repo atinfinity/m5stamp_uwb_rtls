@@ -15,7 +15,7 @@ M5Stack Stamp UWB(Qorvo QM33120W 搭載)を用いて、屋内フロア(20〜50 m
 | タグ数 | 2〜5 台(同時測位) |
 | 測位精度 | 実用 30 cm 程度(見通し時。DS-TWR の測距誤差は約 0.14 m) |
 | 更新レート | タグあたり 1〜2 Hz(初期目標。チューニングで向上余地あり) |
-| アンカー数 | 8〜12 台(セル分割、1 セルあたり最低 4 台) |
+| アンカー数 | 8〜12 台(セル分割、1 セルあたり 4 台を標準。解算の下限は 3 台) |
 | 出力 | 各タグの (x, y) 座標。PC 上でリアルタイム可視化 |
 
 ### 前提となる調査結果
@@ -45,7 +45,7 @@ M5Stack Stamp UWB(Qorvo QM33120W 搭載)を用いて、屋内フロア(20〜50 m
 
 **M5Stamp C5 + M5Stamp UWB F(FPC 版)を付属の 0.5mm-12P FPC ケーブルで直結**する。
 
-- Stamp C5 の背面 FPC コネクタ(G23, G0, G24, G25, G26, G27, G11, G12)と、公式サンプルのピン割当(SCK=G12, MISO=G26, MOSI=G27, CS=G11, RST=G25, IRQ=G0)が一致しており、**はんだ付け不要で公式サンプルがそのまま動く公式想定の組み合わせ**。
+- Stamp C5 の背面 FPC コネクタ(G23, G0, G24, G25, G26, G27, G11, G12)と、公式サンプルのピン割当(SCK=G12, MISO=G26, MOSI=G27, CS=G11, RST=G25, IRQ=G0, WAKEUP=G24, GP7=G23)が一致しており、**はんだ付け不要で公式サンプルがそのまま動く公式想定の組み合わせ**。
 - 無印版 Stamp UWB(キャスタレーション実装)は量産・独自基板化フェーズ向け。プロトタイプでは FPC 版を推奨。
 
 **接続関係図:**
@@ -145,20 +145,20 @@ flowchart TB
     VIZ --> UI["ブラウザ<br/>フロアマップ / 軌跡 / 測位品質"]
 ```
 
-リポジトリ構成案:
+リポジトリ構成(現状の全体像は [development.md](development.md) §6 を参照):
 
 ```
 m5stamp_uwb_rtls/
 ├── docs/rtls-design.md          # 本書
 ├── firmware/
-│   ├── anchor/                  # アンカー FW (PlatformIO)
-│   ├── tag/                     # タグ FW (PlatformIO)
-│   └── lib/rtls_common/         # アドレス表・スロット定義の共有ヘッダ
+│   ├── anchor/  tag/            # アンカー / タグ FW (PlatformIO)
+│   ├── lib/rtls_common/         # アドレス表・スロット定義の共有ヘッダ
+│   └── lib/rtls_solver/         # B案 C++ ソルバー (tag-design.md)
 ├── server/
 │   ├── positioning/             # 解算エンジン (numpy/scipy)
-│   ├── viz/                     # Web ダッシュボード
+│   ├── web/                     # Web ダッシュボード (FastAPI + Canvas UI)
 │   └── config.yaml              # アンカー座標・セル・タグ定義
-└── tools/calibrate/             # アンテナ遅延校正スクリプト
+└── tools/                       # シミュレータ・仮想タグ・Step 1 計測ツール
 ```
 
 開発環境は PlatformIO(Arduino フレームワーク、`board = esp32-c5` 系)+ 公式 M5Stamp-UWB ライブラリ。
