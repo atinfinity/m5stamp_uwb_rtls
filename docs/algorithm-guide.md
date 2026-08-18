@@ -56,7 +56,7 @@ EOF
 ```
 
 劣悪条件での頑健性は `SimParams` を振って確認する(`tools/simulate.py --nlos-prob 0.2 --dropout-prob 0.1` 等)。
-チューニングのグリッド探索は **`tools/sweep.py`** で機械化できる
+チューニングのグリッド探索は **`tools/sweep.py`** で自動化できる
 (`--param tuning.residual_gate_m=0.3,0.5,0.7` の直積を一括評価し CEP 表を出力。真値なしの実測ログにも対応)。
 テストスイートにも同じ回帰が入っている: `uv run pytest tests/test_e2e_replay.py -s`(CEP を print する)。
 

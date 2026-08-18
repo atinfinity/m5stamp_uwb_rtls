@@ -3,7 +3,7 @@
 - 作成日: 2026-08-15
 - ステータス: ドラフト(実装前レビュー用)
 - 上位文書: [rtls-design.md](rtls-design.md)(基本設計 §5 の「B案: タグ上計算」の詳細設計)
-- 姉妹文書: [server-design.md](server-design.md)(A案。解算アルゴリズムは本書と共通仕様)
+- 関連文書: [server-design.md](server-design.md)(A案。解算アルゴリズムは本書と共通仕様)
 
 ## 1. スコープと位置づけ
 
