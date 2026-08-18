@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Step 1 計測ログの統計解析。
 
-capture.py が保存した CSV から以下を算出する (ds-twr-design.md §6-1/§6-2):
+capture.py が保存した CSV から以下を算出する (ds-twr-design.md §6 の 1./2.):
   - 成功率、エラー内訳
   - 距離: 平均・bias(真値との差)・標準偏差 → bias_mm 校正値の元データ
   - 交換所要時間 exchange_us の p50 / p95 / p99 → TDMA スロット設計の根拠

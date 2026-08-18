@@ -2,7 +2,7 @@
 """パラメータスイープ: tuning のグリッドをリプレイ一括評価する (Issue #20)。
 
 同一の ranges JSONL に対して tuning パラメータの全組合せをリプレイし、
-評価表を出力する。algorithm-guide.md §2 の開発ループの機械化。
+評価表を出力する。algorithm-guide.md §2 の開発ループの自動化。
 
 使い方:
     # 真値あり (シミュレータ出力): CEP で評価
