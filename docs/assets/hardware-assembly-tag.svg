@@ -59,7 +59,7 @@
   <!-- keep-clear note -->
   <path d="M622,136 C660,136 660,120 700,120" fill="none" stroke="#c62828" stroke-width="1.5" stroke-dasharray="4 3"/>
   <text x="706" y="112" font-size="12" font-weight="bold" fill="#c62828">アンテナ端は金属から離して</text>
-  <text x="706" y="128" font-size="12" font-weight="bold" fill="#c62828">露出させる(ケース設計時注意)</text>
+  <text x="706" y="128" font-size="12" font-weight="bold" fill="#c62828">露出させる(ケース側は開口が必要)</text>
 
   <!-- ===== pin mapping panel ===== -->
   <rect x="660" y="160" width="230" height="150" rx="6" fill="#f6f8fa" stroke="#d0d7de"/>
