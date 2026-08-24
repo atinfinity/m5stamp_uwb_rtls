@@ -83,6 +83,22 @@ uv run python tools/step1/analyze.py logs/dist*.csv
   代入される定数`kDsResponseTxDelayUus`で決まる。3000→1500 µsに詰める実験は、この定数を
   変更して同手順で比較する
 
+### アンカー間ギャップの計測(4アンカー巡回、Issue [#43](https://github.com/atinfinity/m5stamp_uwb_rtls/issues/43))
+
+アンカーを4台(`0x0010`〜`0x0013`)起動し、タグの`platformio.ini`で`TARGET_ANCHOR`の代わりに
+`-DTARGET_ANCHORS=0x0010,0x0011,0x0012,0x0013 -DRANGE_INTERVAL_MS=200 -DINTER_ANCHOR_GAP_MS=<ms>`
+を指定してビルド・書き込む。ギャップを0 / 2 / 5 / 20 msで振り、同じcapture.pyで採取する:
+
+```bash
+uv run --with pyserial python tools/step1/capture.py --port /dev/tty.usbmodemXXXX \
+    --true-dist-m 5.000 --count 2000 --out logs/gap2ms.csv    # 4アンカー × 500サイクル
+uv run python tools/step1/analyze.py logs/gap*.csv            # アンカー別成功率 + サイクル時間p50/p95
+```
+
+成功率を落とさない最小ギャップを`rtls_common.h`の`kDsInterAnchorGapMs`に反映する
+(`docs/reports/step1-ds-twr-report.md` §2b)。アンカー側シリアルの`ignored=`は他アンカー宛Pollの
+受信数で、4台構成では`ok`の約3倍になるのが正常。
+
 ## SS-TWR検証(Issue [#14](https://github.com/atinfinity/m5stamp_uwb_rtls/issues/14)、ss-twr-design.md §4/§6)
 
 DS-TWRの対照試験として、**同じ設置・同じ距離**でenvをSSに替えて同手順を繰り返す:
@@ -140,12 +156,17 @@ uv run python tools/tdoa/sync_analysis.py anchorA.csv anchorB.csv --tag-src 0x00
 ## タグCSV出力仕様
 
 ```
-seq,ok,d_mm,elapsed_ms,exchange_us,err
+seq,anchor,ok,d_mm,elapsed_ms,exchange_us,cycle_us,err
 ```
 
+- `seq`: サイクル通し番号(複数アンカー巡回では同一サイクルの全行で共通)
+- `anchor`: 相手アンカーのショートアドレス
 - `exchange_us`: `requestDSRange()`呼出し全体の実測時間(ホストSPI処理込み)。スロット設計はこちらを使う
 - `elapsed_ms`: ライブラリが報告する所要時間
+- `cycle_us`: サイクル全体(全アンカー + ギャップ)の所要時間。サイクル最後のアンカー行にのみ入る
 - `#`で始まる行はメタデータ/サマリ
+
+旧形式(`seq,ok,d_mm,elapsed_ms,exchange_us,err`、1対1のみ)のCSVもanalyze.pyはそのまま読める。
 
 ## 実測レポートテンプレート
 

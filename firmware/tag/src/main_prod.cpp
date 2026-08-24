@@ -284,6 +284,9 @@ static void runRangingCycle(uint64_t cycle_t_ms) {
         }
         entries[i] = {list[i], res.success ? res.distanceMm : 0, res.success};
         meas[i]    = {list[i], res.success ? res.distanceMm : 0, res.success};
+        if (i + 1 < n && rtls::kDsInterAnchorGapMs > 0) {
+            delay(rtls::kDsInterAnchorGapMs);  // 前アンカーが TX→RX に戻る猶予 (ds-twr-design.md §3.3)
+        }
     }
     seq++;
 
