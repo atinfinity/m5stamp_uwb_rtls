@@ -11,7 +11,7 @@ DS-TWR(Double-Sided Two-Way Ranging)は本システムの**標準測距方式**�
 
 ## 2. 測距原理
 
-### 2.1 メッセージ交換(3メッセージ方式)
+### 2.1 メッセージ交換(4メッセージ方式: Poll / Response / Final / Result)
 
 ```mermaid
 sequenceDiagram
@@ -26,9 +26,12 @@ sequenceDiagram
     Note over T: t5: Final 送信(遅延 T_reply2)
     T->>A: ③ Final(t1, t4, t5 を搭載)
     Note over A: t6: Final 受信
-    Note over A: 全タイムスタンプが揃い ToF を計算
-    A-->>T: (結果通知は Response 系フレームまたは上位で共有)
+    Note over A: 全タイムスタンプが揃い ToF → 距離を計算
+    A->>T: ④ Result(距離 mm を搭載)
+    Note over T: Result 受信で requestDSRange() が返る
 ```
+
+ToFの計算は**アンカー側**で行い、距離はResultフレームでタグへ返す。公式ライブラリの`requestDSRange()`はResultを受信して初めて成功を返すため、1交換の所要時間・エアタイムにはResultの送受信も含まれる(§3.3の`resultRxAfterFinalTxDelayUus`、`resultRepeatCount`)。
 
 ### 2.2 ToF計算式
 
@@ -41,6 +44,8 @@ ToF = (T_round1 × T_round2 − T_reply1 × T_reply2)
 
 距離 d = c × ToF   (c = 299,792,458 m/s。1 ns ≈ 30 cm)
 ```
+
+この計算はアンカーが行い(t1, t4, t5はFinalで受け取る)、得られた距離をResultでタグへ通知する。
 
 ### 2.3 クロックドリフト誤差の相殺(DS-TWRを採用する理由)
 
@@ -58,8 +63,8 @@ err ≈ ToF × (e_T + e_A) / 2      (例: ToF 100 ns × 40 ppm / 2 = 2 ps → �
 
 | 役割 | API | 備考 |
 |---|---|---|
-| タグ | `requestDSRange(M5Stamp_UWBDSRangeConfig)` → `M5Stamp_UWBDSRangeResult` | ブロッキング呼出し。結果に距離(mm/m)・シーケンス番号・成否 |
-| アンカー | `respondDSRange(M5Stamp_UWBDSRangeConfig)` → `M5Stamp_UWBDSResponderResult` | ループで呼び続け、自局宛Pollに応答 |
+| タグ | `requestDSRange(M5Stamp_UWBDSRangeConfig)` → `M5Stamp_UWBDSRangeResult` | ブロッキング呼出し(Poll送信 → Result受信まで)。結果に距離(mm/m、Resultフレーム経由)・シーケンス番号・成否 |
+| アンカー | `respondDSRange(M5Stamp_UWBDSRangeConfig)` → `M5Stamp_UWBDSResponderResult` | ループで呼び続け、自局宛Pollに応答。ToF計算とResult送信まで担当し、結果にも距離が入る |
 
 ### 3.2 フレーム・アドレス設定
 
@@ -75,6 +80,7 @@ err ≈ ToF × (e_T + e_A) / 2      (例: ToF 100 ns × 40 ppm / 2 = 2 ps → �
 | `finalTxDelayUus` / `kDsFinalTxDelayUus`(タグ) | 1800 µs | Response受信 → Final送信の遅延 |
 | `rxTimeoutUus` / `kDsRxTimeoutUus` | 3000 µs | 各受信待ちの上限 |
 | `hostTimeoutMs` / `kDsHostTimeoutMs` | 100 ms | `requestDSRange()`全体の上限 |
+| `resultRxAfterFinalTxDelayUus` / `kDsResultRxAfterFinalTxDelayUus`(タグ) | 500 µs | Final送信 → Result受信待ち開始までの遅延 |
 | `resultRepeatCount` / `kDsResultRepeatCount`(アンカー) | 1 回 | アンカー→タグのResultフレーム再送回数。ライブラリ既定は3だが、タグは最初のResultで次アンカーのPollへ移るため余分な再送は次の交換と衝突する。公式`DS_TWR_MULTI_ANCHOR`例に合わせて1 |
 | `resultRepeatGapMs` / `kDsResultRepeatGapMs` | 3 ms | Result再送間隔(再送1回では未使用) |
 | — / `kDsInterAnchorGapMs`(タグ) | 2 ms | 巡回中のアンカー切替ギャップ。前アンカーがTX→RXに戻る猶予(公式例は20 ms。4台 × 20 msではスロット予算を超えるため、Step 1で最小値を実測) |
@@ -105,7 +111,7 @@ err ≈ ToF × (e_T + e_A) / 2      (例: ToF 100 ns × 40 ppm / 2 = 2 ps → �
 
 基本設計 §4.4のスロット(90 ms)内で4アンカー × (1交換 + リトライ)を実行する。本方式固有の考慮:
 
-- **交換中の割込み耐性**: DS-TWRは3メッセージが揃って1測距。他タグの電波はアドレス不一致で無視されるが、交換中の衝突はFinal喪失として現れる。リトライで吸収し、スロット同期(±10 ms、基本設計 §4.9)で衝突自体を稀にする。
+- **交換中の割込み耐性**: DS-TWRは4メッセージが揃って1測距。他タグの電波はアドレス不一致で無視されるが、交換中の衝突はFinalまたはResultの喪失として現れる。リトライで吸収し、スロット同期(±10 ms、基本設計 §4.9)で衝突自体を稀にする。
 - **アンカー側は常時`respondDSRange()`ループ**であり、どのタグのPollにも(自局宛なら)応答する。アンカーにスロットの概念は不要 — タグ側の規律だけでTDMAが成立する。
 
 ## 6. テスト計画(ロードマップStep 1に対応)
