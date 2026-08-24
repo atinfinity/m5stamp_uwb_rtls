@@ -173,7 +173,7 @@ MQTTの実送信は`net_task`が非同期に行い、**スロット時間をWi-F
 |---|---|
 | アルゴリズム変更のたびに書き込みが必要 | **OTA更新**(`esp_https_ota`、`net_task`がMQTTの更新通知で起動)。全タグへ一括配信 |
 | 誤差原因(どの距離が狂ったか)を追えない | **HYBRIDモード**で生距離を並行publish → A案のrecorder/replayがそのまま使える |
-| パラメータ試行錯誤が遅い | `tuning`パラメータ(gate、residual_gate、σ 類)を**NVS + MQTT `rtls/config/tuning`(retained, version付き)**で配布し、書き込み不要で変更 |
+| パラメータ試行錯誤が遅い | `tuning`パラメータ(gate、residual_gate、σ 類)を**NVS + MQTT `rtls/config/tuning`(retained, version付き)** で配布し、書き込み不要で変更 |
 | 解算実装がPythonと乖離するリスク | `rtls_solver`を`env:native`でビルドし、**同一ranges入力に対するPython実装との一致試験**(許容差1 cm)をCI的に実行 |
 
 ## 9. リソース見積もり

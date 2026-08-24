@@ -63,7 +63,7 @@ Stamp C5とStamp UWB Fは、UWB F付属の**0.5mm-12P FPCケーブル1本**で�
 
 ## 4. 3Dプリントモデル(アンカー取付具・タグ用ケース)
 
-OpenSCADソースとSTLを**[hardware/cad/](../hardware/cad/)**に置いている(パラメータ調整・再生成の方法は同ディレクトリの[README](../hardware/cad/README.md)を参照)。公称寸法ベースのv1モデルのため、印刷後に実機でフィット確認し`tol`等を調整すること。
+OpenSCADソースとSTLを **[hardware/cad/](../hardware/cad/)** に置いている(パラメータ調整・再生成の方法は同ディレクトリの[README](../hardware/cad/README.md)を参照)。公称寸法ベースのv1モデルのため、印刷後に実機でフィット確認し`tol`等を調整すること。
 
 ### 4.1 アンカー取付具
 

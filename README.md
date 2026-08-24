@@ -28,7 +28,7 @@ M5Stack Stamp UWB (Qorvo QM33120W) + Stamp C5による屋内2D RTLS(リアルタ
 
 ## クイックスタート(実機不要)
 
-パッケージ管理は[uv](https://docs.astral.sh/uv/)を使用(`brew install uv`)。詳細な環境構築手順は**[docs/development.md](docs/development.md)**を参照。
+パッケージ管理は[uv](https://docs.astral.sh/uv/)を使用(`brew install uv`)。詳細な環境構築手順は **[docs/development.md](docs/development.md)** を参照。
 
 ```bash
 uv sync --all-extras   # .venv 作成 + 依存インストール (dev グループ含む)
