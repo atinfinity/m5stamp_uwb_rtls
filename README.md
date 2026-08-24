@@ -2,33 +2,33 @@
 
 [![CI](https://github.com/atinfinity/m5stamp_uwb_rtls/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/atinfinity/m5stamp_uwb_rtls/actions/workflows/ci.yml)
 
-M5Stack Stamp UWB (Qorvo QM33120W) + Stamp C5 による屋内 2D RTLS(リアルタイム測位システム)。
+M5Stack Stamp UWB (Qorvo QM33120W) + Stamp C5による屋内2D RTLS(リアルタイム測位システム)。
 
 > [!CAUTION]
-> 本プロジェクトは**実機での動作確認をまだ行っていません**。データシート・公式ドキュメント・公式サンプルコードなどの公開情報をもとに実装しており、実機では動作しない・調整が必要となる可能性があります(ファームウェア、3D プリントモデルの寸法などを含む)。
+> 本プロジェクトは**実機での動作確認をまだ行っていません**。データシート・公式ドキュメント・公式サンプルコードなどの公開情報をもとに実装しており、実機では動作しない・調整が必要となる可能性があります(ファームウェア、3Dプリントモデルの寸法などを含む)。
 
 > [!NOTE]
-> 本プロジェクトは**非公式の個人プロジェクト**です。M5Stack 社・Qorvo 社およびその関連企業とは一切関係ありません。
+> 本プロジェクトは**非公式の個人プロジェクト**です。M5Stack社・Qorvo社およびその関連企業とは一切関係ありません。
 
-![屋内 UWB 測位のイメージ(アンカー設置とタグ測位)](docs/assets/indoor-positioning-overview.svg)
+![屋内UWB測位のイメージ(アンカー設置とタグ測位)](docs/assets/indoor-positioning-overview.svg)
 
-*屋内にアンカーを設置してタグを測位するイメージ。壁面・柱(高さ 1.8〜2.5 m)の四隅にアンカーを設置し、タグが各アンカーへ順次 [DS-TWR](docs/ds-twr-design.md) 測距 → 得られた距離セットから最小二乗法で 2D 座標を推定する。配置設計の詳細は [docs/rtls-design.md](docs/rtls-design.md) §3.3 を参照。*
+*屋内にアンカーを設置してタグを測位するイメージ。壁面・柱(高さ1.8〜2.5 m)の四隅にアンカーを設置し、タグが各アンカーへ順次[DS-TWR](docs/ds-twr-design.md)測距 → 得られた距離セットから最小二乗法で2D座標を推定する。配置設計の詳細は[docs/rtls-design.md](docs/rtls-design.md) §3.3を参照。*
 
-![RTLS フロアマップ UI(仮想タグによるライブ動作)](docs/assets/rtls-ui.gif)
+![RTLSフロアマップUI(仮想タグによるライブ動作)](docs/assets/rtls-ui.gif)
 
-*可視化 UI の動作例(実機レス: 仮想タグ + シミュレータ)。**●** = 測位結果(実線 = 推定軌跡)、**○** = 真値 GT(点線 = 真値軌跡、開発モード)、細実線 = 解算に使用した測距、**赤破線** = 外れ値除去/ゲートで棄却された測距(NLoS)。右側は監視パネル(アンカー別欠測率・受信統計)。凡例は画面下部に常時表示される。*
+*可視化UIの動作例(実機レス: 仮想タグ + シミュレータ)。**●** = 測位結果(実線 = 推定軌跡)、**○** = 真値GT(点線 = 真値軌跡、開発モード)、細実線 = 解算に使用した測距、**赤破線** = 外れ値除去/ゲートで棄却された測距(NLoS)。右側は監視パネル(アンカー別欠測率・受信統計)。凡例は画面下部に常時表示される。*
 
-- 設計書: [docs/rtls-design.md](docs/rtls-design.md)(基本設計)ほか [docs/](docs/) 配下
+- 設計書: [docs/rtls-design.md](docs/rtls-design.md)(基本設計)ほか[docs/](docs/)配下
   - 測位サーバー(A案): [server-design.md](docs/server-design.md) / タグ上計算(B案): [tag-design.md](docs/tag-design.md)
   - 測距方式: [DS-TWR](docs/ds-twr-design.md)(採用)/ [SS-TWR](docs/ss-twr-design.md)(予備)/ [TDoA](docs/tdoa-design.md)(将来)
-- ハードウェア: [docs/hardware.md](docs/hardware.md)(想定ハードウェアリスト・組み立て図)/ [hardware/cad/](hardware/cad/README.md)(アンカー取付具・タグ用ケースの 3D プリントモデル)
+- ハードウェア: [docs/hardware.md](docs/hardware.md)(想定ハードウェアリスト・組み立て図)/ [hardware/cad/](hardware/cad/README.md)(アンカー取付具・タグ用ケースの3Dプリントモデル)
 - ファームウェア: [firmware/](firmware/)(Step 1: DS-TWR 1対1計測 — Issue #1)
 - 測位サーバー: [server/](server/)(実機レスで開発可能 — Issue #3)
-- 開発ガイド: [環境構築](docs/development.md) / [構成カスタマイズ(アンカー・タグ)](docs/configuration.md) / [測位アルゴリズム開発](docs/algorithm-guide.md) / [アプリケーション開発](docs/application-guide.md)([examples/](examples/) にサンプルあり)
+- 開発ガイド: [環境構築](docs/development.md) / [構成カスタマイズ(アンカー・タグ)](docs/configuration.md) / [測位アルゴリズム開発](docs/algorithm-guide.md) / [アプリケーション開発](docs/application-guide.md)([examples/](examples/)にサンプルあり)
 
 ## クイックスタート(実機不要)
 
-パッケージ管理は [uv](https://docs.astral.sh/uv/) を使用(`brew install uv`)。詳細な環境構築手順は **[docs/development.md](docs/development.md)** を参照。
+パッケージ管理は[uv](https://docs.astral.sh/uv/)を使用(`brew install uv`)。詳細な環境構築手順は**[docs/development.md](docs/development.md)**を参照。
 
 ```bash
 uv sync --all-extras   # .venv 作成 + 依存インストール (dev グループ含む)
@@ -42,7 +42,7 @@ uv run python tools/simulate.py --config server/config.yaml --duration-s 120 \
 uv run python -m server.replay logs/sim_ranges.jsonl --out logs/positions.jsonl
 ```
 
-## ライブ実行(仮想タグで end-to-end)
+## ライブ実行(仮想タグでend-to-end)
 
 サーバーと仮想タグは起動したまま動き続けるので、ターミナルを分けて実行する([docs/development.md](docs/development.md) §4):
 
@@ -52,28 +52,28 @@ uv run python -m server.app --config server/config.yaml   # 測位サーバー +
 uv run python tools/virtual_tag.py                        # 仮想タグ 3 台 (ターミナル 2)
 ```
 
-ブラウザで http://localhost:8000 — フロアマップにタグ位置・軌跡・セルハンドオーバーがリアルタイム表示される。実機タグが用意できたら virtual_tag を実機に差し替えるだけで同じ経路が動く。
+ブラウザでhttp://localhost:8000 — フロアマップにタグ位置・軌跡・セルハンドオーバーがリアルタイム表示される。実機タグが用意できたらvirtual_tagを実機に差し替えるだけで同じ経路が動く。
 
 ## 実機作業(要ハードウェア)
 
-Step 1 の DS-TWR 実測手順は [firmware/README.md](firmware/README.md) を参照。実測値の反映先は Issue #1 のチェックリストにまとめてある。
+Step 1のDS-TWR実測手順は[firmware/README.md](firmware/README.md)を参照。実測値の反映先はIssue #1のチェックリストにまとめてある。
 
 ## 用語集(ドキュメント頻出の略語)
 
 | 用語 | 意味 |
 |---|---|
-| CEP50 / CEP95 | 測位誤差の中央値 / 95 パーセンタイル(Circular Error Probable)。「CEP50 ≤ 0.30 m」= 半数の測位が誤差 30 cm 以内 |
-| LoS / NLoS | 見通しあり / 見通し外(Line of Sight)。遮蔽があると UWB の測距値は伸びる方向に狂う |
-| TWR(SS- / DS-) | Two-Way Ranging。電波の往復時間から 1 対 1 の距離を測る方式。SS = 片側往復、DS = 両側往復 |
+| CEP50 / CEP95 | 測位誤差の中央値 / 95パーセンタイル(Circular Error Probable)。「CEP50 ≤ 0.30 m」= 半数の測位が誤差30 cm以内 |
+| LoS / NLoS | 見通しあり / 見通し外(Line of Sight)。遮蔽があるとUWBの測距値は伸びる方向に狂う |
+| TWR(SS- / DS-) | Two-Way Ranging。電波の往復時間から1対1の距離を測る方式。SS = 片側往復、DS = 両側往復 |
 | TDoA | Time Difference of Arrival。複数アンカーの受信時刻差から測位する方式(将来方式) |
 | TDMA | 時分割多元接続。タグごとに送信時間帯(スロット)を割り当てて衝突を防ぐ |
 | DOP | 精度劣化指数(Dilution of Precision)。アンカー配置の幾何が悪いほど誤差が拡大する |
-| CFO | キャリア周波数オフセット(クロックずれ)。SS-TWR の成否を左右する([ss-twr-design.md](docs/ss-twr-design.md) §2.2) |
-| GT | Ground Truth(真値)。シミュレータが出力する正解位置。UI では ○ と点線で表示 |
-| IRLS | 反復再重み付け最小二乗。C++ ソルバーが scipy の代わりに使う近似解法 |
+| CFO | キャリア周波数オフセット(クロックずれ)。SS-TWRの成否を左右する([ss-twr-design.md](docs/ss-twr-design.md) §2.2) |
+| GT | Ground Truth(真値)。シミュレータが出力する正解位置。UIでは ○ と点線で表示 |
+| IRLS | 反復再重み付け最小二乗。C++ ソルバーがscipyの代わりに使う近似解法 |
 
 ## ライセンス
 
 [Apache License 2.0](LICENSE)
 
-ファームウェアのビルド時に取得される [M5Stamp-UWB ライブラリ](https://github.com/m5stack/M5Stamp-UWB)(MIT。同梱の Qorvo QM33120W ドライバは Qorvo 独自ライセンス)など、依存ライブラリはそれぞれのライセンスに従う。
+ファームウェアのビルド時に取得される[M5Stamp-UWBライブラリ](https://github.com/m5stack/M5Stamp-UWB)(MIT。同梱のQorvo QM33120WドライバはQorvo独自ライセンス)など、依存ライブラリはそれぞれのライセンスに従う。
