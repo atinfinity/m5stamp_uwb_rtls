@@ -75,6 +75,9 @@ err ≈ ToF × (e_T + e_A) / 2      (例: ToF 100 ns × 40 ppm / 2 = 2 ps → �
 | `finalTxDelayUus` / `kDsFinalTxDelayUus`(タグ) | 1800 µs | Response受信 → Final送信の遅延 |
 | `rxTimeoutUus` / `kDsRxTimeoutUus` | 3000 µs | 各受信待ちの上限 |
 | `hostTimeoutMs` / `kDsHostTimeoutMs` | 100 ms | `requestDSRange()`全体の上限 |
+| `resultRepeatCount` / `kDsResultRepeatCount`(アンカー) | 1 回 | アンカー→タグのResultフレーム再送回数。ライブラリ既定は3だが、タグは最初のResultで次アンカーのPollへ移るため余分な再送は次の交換と衝突する。公式`DS_TWR_MULTI_ANCHOR`例に合わせて1 |
+| `resultRepeatGapMs` / `kDsResultRepeatGapMs` | 3 ms | Result再送間隔(再送1回では未使用) |
+| — / `kDsInterAnchorGapMs`(タグ) | 2 ms | 巡回中のアンカー切替ギャップ。前アンカーがTX→RXに戻る猶予(公式例は20 ms。4台 × 20 msではスロット予算を超えるため、Step 1で最小値を実測) |
 | 1交換の所要時間(見込み) | 5〜10 ms | ロードマップStep 1で実測し、TDMAスロット設計(基本設計 §4.4)を確定する |
 
 現在の確定値は`firmware/lib/rtls_common/rtls_common.h`の`kDs*`定数を正とする(この定数がライブラリ設定の各フィールドへ代入される)。
@@ -84,6 +87,7 @@ err ≈ ToF × (e_T + e_A) / 2      (例: ToF 100 ns × 40 ppm / 2 = 2 ps → �
 ### 3.4 リトライとエラー処理
 
 - 1アンカーにつき失敗時リトライ1回(乱数バックオフ1〜5 ms)。それでも失敗なら当該サイクルは欠測(基本設計 §4.4)。
+- アンカー側の`RangeFrameMismatch`は「他アンカー宛のPollを受信した」事象で、多アンカー環境では毎サイクル発生する正常動作。統計では`ignored`として`err`と区別する(公式`DS_TWR_MULTI_ANCHOR`例と同じ扱い)。
 - `lastError()`の種別(タイムアウト / CRC / チップ異常)をタグの統計に集計し、MQTT統計(A案 §12)へ流す。チップ異常が連続する場合は`hardReset()` → `begin()`で復帰を試みる。
 
 ## 4. 誤差予算と対策
@@ -110,3 +114,4 @@ err ≈ ToF × (e_T + e_A) / 2      (例: ToF 100 ns × 40 ppm / 2 = 2 ps → �
 2. **タイミング実測**: 1交換の所要時間分布(p50/p95/p99)と、`response_delay`を3000 → 1500 µsへ詰めた際の成功率変化。TDMAスロット幅の根拠データとする。
 3. **成功率vs距離**: 5 m刻みで成功率を測り、実効レンジ(成功率95% を保てる距離)を求める。セル寸法(15〜25 m)の妥当性を確認。
 4. **干渉試験**: 2タグが同時に同一アンカーへPollする最悪ケースを意図的に作り、失敗がタイムアウトとして安全に現れる(誤距離が出ない)ことを確認。
+5. **アンカー間ギャップ**: アンカー4台を巡回し、`kDsInterAnchorGapMs` を 0 / 2 / 5 / 20 msで振って成功率とサイクル時間(p95)を測る(`tag_step1`の`TARGET_ANCHORS`指定)。成功率を落とさない最小値を採用し、4アンカー分のサイクルp95がスロット有効幅90 msに収まることを確認する。
