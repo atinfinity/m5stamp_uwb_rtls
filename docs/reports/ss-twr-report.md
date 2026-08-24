@@ -1,4 +1,4 @@
-# 実測レポート: SS-TWR対照試験(Issue #14)
+# 実測レポート: SS-TWR対照試験(Issue [#14](https://github.com/atinfinity/m5stamp_uwb_rtls/issues/14))
 
 > このファイルをコピーして記入する。DS-TWR(Step 1)と**同じ設置**で実施すること。
 > 手順: [firmware/README.md](../../firmware/README.md)「SS-TWR検証」/ 設計: [ss-twr-design.md](../ss-twr-design.md) §4/§6
@@ -55,4 +55,4 @@
 
 - [ ] `docs/ss-twr-design.md` §2.2/§4 — CFO補償の有無と実測値を追記
 - [ ] 成立の場合: 方式別biasテーブルの追加方針を決定(config拡張)
-- [ ] Issue #14のチェックリスト更新 → close
+- [ ] Issue [#14](https://github.com/atinfinity/m5stamp_uwb_rtls/issues/14)のチェックリスト更新 → close

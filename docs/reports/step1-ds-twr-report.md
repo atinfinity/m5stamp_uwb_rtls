@@ -1,4 +1,4 @@
-# Step 1実測レポート: DS-TWR 1対1測距(Issue #1)
+# Step 1実測レポート: DS-TWR 1対1測距(Issue [#1](https://github.com/atinfinity/m5stamp_uwb_rtls/issues/1))
 
 > このファイルをコピーして記入する(例: `docs/reports/2026-XX-XX-step1.md`)。
 > 手順: [firmware/README.md](../../firmware/README.md)「Step 1」/ 設計: [ds-twr-design.md](../ds-twr-design.md) §6
@@ -62,4 +62,4 @@
 - [ ] `server/config.yaml` — アンカー別`bias_mm`
 - [ ] `docs/ds-twr-design.md` §3.3 — タイミングパラメータ表を実測値へ
 - [ ] `docs/rtls-design.md` §4.4 — TDMAスロット幅の根拠(交換時間p95)
-- [ ] Issue #1のチェックリスト更新 → close
+- [ ] Issue [#1](https://github.com/atinfinity/m5stamp_uwb_rtls/issues/1)のチェックリスト更新 → close

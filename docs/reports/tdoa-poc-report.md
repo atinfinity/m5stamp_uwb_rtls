@@ -1,4 +1,4 @@
-# 実測レポート: TDoA PoC(Issue #16)
+# 実測レポート: TDoA PoC(Issue [#16](https://github.com/atinfinity/m5stamp_uwb_rtls/issues/16))
 
 > このファイルをコピーして記入する。
 > 手順: [firmware/README.md](../../firmware/README.md)「TDoA PoC」/ 設計: [tdoa-design.md](../tdoa-design.md) §6
@@ -51,4 +51,4 @@
 
 - [ ] `docs/tdoa-design.md` §3(成立条件)へ実測値を追記(成立/不成立とも)
 - [ ] 不成立の場合: §5(導入判断基準)に「断念」の記録と根拠を追記
-- [ ] Issue #16のチェックリスト更新 → close
+- [ ] Issue [#16](https://github.com/atinfinity/m5stamp_uwb_rtls/issues/16)のチェックリスト更新 → close
