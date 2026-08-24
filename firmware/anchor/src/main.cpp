@@ -12,8 +12,9 @@
 
 static M5Stamp_UWB uwb;
 
-static uint32_t okCount    = 0;
-static uint32_t errCount   = 0;
+static uint32_t okCount      = 0;
+static uint32_t ignoredCount = 0;  // 他アンカー宛の Poll (多アンカー環境では正常)
+static uint32_t errCount     = 0;
 static uint32_t lastReport = 0;
 
 static void initUwbOrHalt() {
@@ -49,6 +50,10 @@ void loop() {
 #endif
     if (res.success) {
         okCount++;
+    } else if (res.error == M5Stamp_UWBError::RangeFrameMismatch) {
+        // 他アンカー宛の Poll を受信した (dst 不一致)。同一セルの他アンカーの交換を
+        // 毎サイクル聞くので、エラーではなく ignored として数える (Issue #43)。
+        ignoredCount++;
     } else if (res.error != M5Stamp_UWBError::RxTimeout) {
         // 待機中のタイムアウトは正常。それ以外のみ数える。
         errCount++;
@@ -57,8 +62,9 @@ void loop() {
     // 10 秒ごとに統計を出力(シリアル負荷を抑える)
     uint32_t now = millis();
     if (now - lastReport >= 10000) {
-        Serial.printf("# ok=%lu err=%lu heap=%lu\n", (unsigned long)okCount,
-                      (unsigned long)errCount, (unsigned long)ESP.getFreeHeap());
+        Serial.printf("# ok=%lu ignored=%lu err=%lu heap=%lu\n", (unsigned long)okCount,
+                      (unsigned long)ignoredCount, (unsigned long)errCount,
+                      (unsigned long)ESP.getFreeHeap());
         lastReport = now;
     }
 }
