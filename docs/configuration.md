@@ -63,9 +63,9 @@ tags: ["0x0001"]
 2. タグ FW を 1 台ごとに `-DNODE_ADDR=0x000X` でビルド・書き込み
    (`firmware/tag/platformio.ini`)
 
-**5 台が現行 TDMA 設計の上限**。スロット割当はアドレスから自動で決まり
-(`firmware/lib/rtls_common/rtls_slots.h`: スーパーフレーム 500 ms ÷ スロット 100 ms)、
-タグを増やすには次のいずれかが必要:
+**5 台が現行 TDMA 設計の上限**。スロット割当はアドレスから自動で決まる
+(`firmware/lib/rtls_common/rtls_slots.h`: スーパーフレーム 500 ms ÷ スロット 100 ms)。
+6 台以上にするには次のいずれかが必要:
 
 - スーパーフレームを伸ばす(`kSuperframeMs` を 1000 ms に → 10 台 × 1 Hz)
 - スロットを詰める(Step 1 実測で交換時間を確認してから)

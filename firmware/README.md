@@ -48,7 +48,7 @@ ESP32-C5 の Arduino サポートは pioarduino 版 platform を使用(platformi
 cd firmware/anchor
 pio run -t upload
 
-# タグ 計測モード (addr 0x0001 → anchor 0x0010 へ 50ms 間隔で測距)
+# タグ計測モード (addr 0x0001 → anchor 0x0010 へ 50ms 間隔で測距)
 cd ../tag
 pio run -e tag_step1 -t upload
 ```
