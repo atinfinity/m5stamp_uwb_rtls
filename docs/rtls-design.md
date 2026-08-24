@@ -21,7 +21,7 @@ M5Stack Stamp UWB(Qorvo QM33120W搭載)を用いて、屋内フロア(20〜50 m�
 ### 前提となる調査結果
 
 - Stamp UWBは**SPI接続の測距モジュールで単体動作不可**。ホストMCUが必須で、公式ライブラリ([m5stack/M5Stamp-UWB](https://github.com/m5stack/M5Stamp-UWB))のデフォルトホストはM5Stamp C5(ESP32-C5)。
-- 公式ライブラリはArduino用で、提供サンプルは**SS-TWR / DS-TWRの1対1測距のみ**(`SS_TWR_TAG/ANCHOR`, `DS_TWR_TAG/ANCHOR`)。マルチアンカー測位・TDoA・マルチタグのスケジューリングは**未提供のため本設計で自作**する。
+- 公式ライブラリはArduino用で、提供サンプルは**SS-TWR / DS-TWRの1対1測距**(`SS_TWR_TAG/ANCHOR`, `DS_TWR_TAG/ANCHOR`)と、**1タグ × Nアンカーの巡回DS-TWR**(`DS_TWR_MULTI_ANCHOR` / `DS_TWR_MULTI_ANCHOR_TAG`、2026-08-24追加)。巡回測距の作法(Result再送1回・アンカー間ギャップ)はこれに倣う(ds-twr-design.md §3.3)。マルチタグのTDMAスケジューリング・セル管理・測位解算・TDoAは**未提供のため本設計で自作**する。
 - 主要API: `requestRange()` / `respondRange()`(SS-TWR)、`requestDSRange()` / `respondDSRange()`(DS-TWR)。測距コンフィグでPAN ID・自局/相手局ショートアドレスを指定でき、結果構造体から距離(mm/m)・シーケンス番号・成否を取得できる。→ **相手アドレスを切り替えながら複数アンカーへ順次測距する方式が素直に実装可能**。
 - 仕様(公式ドキュメント): UWB Channel 9(中心7987.2 MHz)、IEEE 802.15.4-2020 / 802.15.4z-2020 BPRF、DS-TWR測距誤差約0.14 m、見通し最大約55 m、データレート850 kbps / 6.81 Mbps。
 
