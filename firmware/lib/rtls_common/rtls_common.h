@@ -33,8 +33,14 @@ constexpr uint32_t kDsFinalRxAfterResponseTxDelayUus = 500;
 constexpr uint32_t kDsResultRxAfterFinalTxDelayUus   = 500;
 constexpr uint32_t kDsRxTimeoutUus                   = 3000;
 constexpr uint32_t kDsHostTimeoutMs                  = 100;
-constexpr uint8_t  kDsResultRepeatCount              = 3;
+// Result (アンカー→タグの距離通知) の再送回数。ライブラリ既定は 3 だが、タグは最初の
+// Result を受けた時点で次アンカーの Poll に移るため、余分な再送は次の交換と衝突する。
+// 公式 DS_TWR_MULTI_ANCHOR 例に合わせて 1 とする (Issue #43)。
+constexpr uint8_t  kDsResultRepeatCount              = 1;
 constexpr uint32_t kDsResultRepeatGapMs              = 3;
+// 巡回中のアンカー切替ギャップ [ms]。前アンカーが TX→RX に戻る猶予 (公式例は 20 ms だが
+// 4 台 × 20 ms ではスロット予算 90 ms を超えるため小さく始め、Step 1 で実測して確定)。
+constexpr uint32_t kDsInterAnchorGapMs               = 2;
 
 inline M5Stamp_UWBConfig makeUwbConfig() {
     M5Stamp_UWBConfig config;
