@@ -1,4 +1,4 @@
-# Step 1 実測レポート: DS-TWR 1対1測距(Issue #1)
+# Step 1実測レポート: DS-TWR 1対1測距(Issue [#1](https://github.com/atinfinity/m5stamp_uwb_rtls/issues/1))
 
 > このファイルをコピーして記入する(例: `docs/reports/2026-XX-XX-step1.md`)。
 > 手順: [firmware/README.md](../../firmware/README.md)「Step 1」/ 設計: [ds-twr-design.md](../ds-twr-design.md) §6
@@ -9,16 +9,16 @@
 |---|---|
 | 実施日 / 実施者 | |
 | 場所(環境: 屋内/屋外、床材、周辺の金属) | |
-| 技適確認(番号 or 特例届出) | |
+| 技適確認(番号or特例届出) | |
 | ハードウェア(ロット、アンテナ取付方法、高さ) | |
-| FW コミット / タイミング設定(`kDsResponseTxDelayUus` 等) | |
+| FWコミット / タイミング設定(`kDsResponseTxDelayUus`等) | |
 | 気温 / 通電からの経過時間 | |
 
-## 1. 静的精度(各距離 1000 回)
+## 1. 静的精度(各距離1000回)
 
-`analyze.py` の出力を距離ごとに貼り付け:
+`analyze.py`の出力を距離ごとに貼り付け:
 
-| 真値 [m] | 成功率 [%] | 平均 [m] | bias [cm] | σ [cm] | 備考 |
+| 真値[m] | 成功率[%] | 平均[m] | bias [cm] | σ [cm] | 備考 |
 |---|---|---|---|---|---|
 | 1.000 | | | | | |
 | 5.000 | | | | | |
@@ -32,34 +32,34 @@
 
 - [ ] 受入: 校正後 |平均誤差| ≤ 5 cm(全距離)
 - [ ] 受入: σ ≤ 10 cm(全距離)
-- [ ] bias の距離依存性の有無を確認した(あれば一次補正を検討)
+- [ ] biasの距離依存性の有無を確認した(あれば一次補正を検討)
 
 ## 2. タイミング実測
 
-| 設定 `kDsResponseTxDelayUus` | 成功率 [%] | 交換時間 p50 [ms] | p95 [ms] | p99 [ms] |
+| 設定`kDsResponseTxDelayUus` | 成功率[%] | 交換時間p50 [ms] | p95 [ms] | p99 [ms] |
 |---|---|---|---|---|
 | 3000(既定) | | | | |
 | 1500 | | | | |
 | (最小探索値) | | | | |
 
-- [ ] 「成功率 99% を保てる最小値」を特定した: ______ µs
+- [ ] 「成功率99% を保てる最小値」を特定した: ______ µs
 
-## 3. 成功率 vs 距離(実効レンジ)
+## 3. 成功率vs距離(実効レンジ)
 
-| 距離 [m] | 成功率 [%] |
+| 距離[m] | 成功率[%] |
 |---|---|
 | 5 / 10 / 15 / 20 / 25 / 30 / 35 / 40 / 45 / 50 | |
 
-- 実効レンジ(成功率 95% 維持): ______ m → セル寸法 15〜25 m の妥当性: OK / NG
+- 実効レンジ(成功率95% 維持): ______ m → セル寸法15〜25 mの妥当性: OK / NG
 
 ## 4. 干渉試験
 
-- [ ] 2 タグ同時 Poll で誤距離が出ない(全て失敗=タイムアウトになる)ことを確認
+- [ ] 2タグ同時Pollで誤距離が出ない(全て失敗=タイムアウトになる)ことを確認
 
 ## 転記先(完了したらチェック)
 
-- [ ] `firmware/lib/rtls_common/rtls_common.h` — DS-TWR タイミング定数を確定値へ
-- [ ] `server/config.yaml` — アンカー別 `bias_mm`
+- [ ] `firmware/lib/rtls_common/rtls_common.h` — DS-TWRタイミング定数を確定値へ
+- [ ] `server/config.yaml` — アンカー別`bias_mm`
 - [ ] `docs/ds-twr-design.md` §3.3 — タイミングパラメータ表を実測値へ
-- [ ] `docs/rtls-design.md` §4.4 — TDMA スロット幅の根拠(交換時間 p95)
-- [ ] Issue #1 のチェックリスト更新 → close
+- [ ] `docs/rtls-design.md` §4.4 — TDMAスロット幅の根拠(交換時間p95)
+- [ ] Issue [#1](https://github.com/atinfinity/m5stamp_uwb_rtls/issues/1)のチェックリスト更新 → close
