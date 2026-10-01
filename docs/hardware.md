@@ -39,9 +39,11 @@
 - **国内での入手先**: スイッチサイエンスで[M5Stamp UWBモジュール(FPCコネクタ、FPCケーブル付き)M5STACK-S017-F](https://www.switch-science.com/products/11375)と[M5StampC5 DIP M5STACK-S016-DIP](https://www.switch-science.com/products/11352)が扱われており、本ドキュメントの想定構成と一致する。アンカー・タグとも同一ユニットなので、両方をノード台数分そろえる。
 - **Stamp C5「DIP」版のピンヘッダ**: DIP版には2.54mm-7Pピンヘッダ2本が付属するが、UWB FとはFPCで直結するため**はんだ付けは不要**。§4の3Dプリントモデルはヘッダなしの公称寸法で作っているので、ヘッダを付けるとケース・取付具に収まらない可能性がある。
 - **Wi-Fi用外付けアンテナ**: Stamp C5のWi-Fiは付属アンテナ(FPCアンテナ、2.4/5 GHz、IPEX-1、14.3×5.3 mm、ケーブル長50 mm。[公式ドキュメント](https://docs.m5stack.com/en/core/Stamp-C5)参照)をIPEX-1コネクタにつないで使う。Stamp C5に同梱されているので別途購入は不要。タグはWi-Fiテレメトリに必須(アンカーはWi-Fi不要)。タグ用ケースではフタ裏の凹みに貼る(§4.2)。
-- **LiPoバッテリーは別途必要**(タグのみ)。Stamp C5の充電電流は約200 mAなので、1C充電で200 mA以上を受け入れられる容量(目安400 mAh以上)を選ぶ。候補例(いずれもJST PH 2ピン、保護回路付き。2026年10月時点で品切れのため購入時に在庫を確認):
-  - [リチウムイオンポリマー電池 400mAh](https://www.switch-science.com/products/3118)(DPTL-DTP502535、37×25.5×5.2 mm、約13 g)
-  - [リチウムイオン電池 900mAh](https://www.switch-science.com/catalog/2073/)(54×36×6.2 mm、約24 g。充電電流0.5C=450 mA以下の指定も満たす)
+- **LiPoバッテリーは別途必要**(タグのみ)。Stamp C5の充電電流は約200 mAなので、1C充電で200 mA以上を受け入れられる容量(目安400 mAh以上)を選ぶ。候補例(いずれもDATA POWER TECHNOLOGY製、JST PH 2ピン、保護回路付き。2026年10月時点で千石電商に在庫あり。購入時に在庫を確認):
+  - [DTP502535(PHR) 400mAh](https://www.sengoku.co.jp/mod/sgk_cart/detail.php?code=EEHD-4YZL)(25×36×5 mm、10 g以下)— §4のタグ用ケースの既定寸法(`bat`)で収まる。推奨
+  - [DTP603048(PHR) 860mAh](https://www.sengoku.co.jp/mod/sgk_cart/detail.php?code=EEHD-4YZM)(30×49×6 mm、18 g以下)— 長時間向け。タグ用ケースは`bat`を変更して再生成する(幅約5 mm・長さ約12 mm大きくなる)
+
+  スイッチサイエンスの同型400mAh品([3118](https://www.switch-science.com/products/3118))は2026年10月時点で品切れ。
 
   Stamp C5にバッテリー用コネクタはなく、2.54 mmピッチのパッド列の**VBAT(+)とGND(−)**に配線する([公式ピン配置図](https://docs.m5stack.com/en/core/Stamp-C5_DIP)。部品面を上・USB-Cを手前にして左列の上から3V3 / G1 / G2 / G3 / **VBAT** / USB_5V / **GND**)。JST PHコネクタ付きの電池をそのまま使うなら、[JST PH 2ピン付きワイヤ](https://switch-science.com/catalog/2215)をパッドにはんだ付けして中継する。電池側の極性(赤=+)も挿す前に確認すること。§4のタグ用ケースはLiPo寸法を`bat`パラメータで変更できる。
 
