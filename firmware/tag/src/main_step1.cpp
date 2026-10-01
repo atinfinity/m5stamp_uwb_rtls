@@ -66,7 +66,7 @@ static uint32_t lastRange  = 0;
 static uint32_t lastReport = 0;
 
 static void initUwbOrHalt() {
-    while (!uwb.begin(rtls::makeUwbConfig())) {
+    while (!uwb.begin(rtls::makeUwbConfig(), rtls::makePhyConfig())) {
         Serial.printf("# uwb begin failed: %s — retrying\n", uwb.lastErrorName());
         uwb.hardReset();
         delay(1000);
