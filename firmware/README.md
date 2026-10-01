@@ -43,6 +43,8 @@ Issue [#1](https://github.com/atinfinity/m5stamp_uwb_rtls/issues/1) / 設計: [d
 
 ESP32-C5のArduinoサポートはpioarduino版platformを使用(platformio.ini設定済み)。
 
+platformとライブラリはバージョンを固定している(platform 55.03.311 = Arduino core 3.3.11、M5Stamp-UWB v0.1.1)。`stable`の最新版はPlatformIO Core 6.2.0以上が必要なため、更新する場合はCoreも上げてから全envのビルドとStep 1の再計測で確認すること。
+
 ```bash
 # アンカー (addr 0x0010)
 cd firmware/anchor
