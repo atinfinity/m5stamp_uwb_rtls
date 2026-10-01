@@ -2,6 +2,7 @@
 // 内部レイアウト(長手方向): LiPo バッテリー | M5Stamp C5 | Stamp UWB F
 // - UWB F のアンテナ端はケース端の開口(アンテナ窓)に向き、樹脂で覆わない
 // - C5 の USB-C は側壁のスロットから充電・書き込み可能
+// - C5 の Wi-Fi 用 FPC アンテナはフタ裏の凹み(C5 ゾーン上)に貼る。UWB アンテナ・LiPo から離す
 // - 各ボードは背面 FPC コネクタが床の溝に収まる向き(部品面を上)で置く
 // - バッテリー端には ストラップループ
 // 印刷: 本体は底面、フタは天面をベッドに向ける(どちらもサポート不要)
@@ -11,7 +12,7 @@ include <common.scad>
 
 part = "preview";
 
-bat = [25, 36, 6.5];  // LiPo 公称 [幅, 長さ, 厚み](例: 602535 500 mAh)。要実測調整
+bat = [25.5, 37, 5.2];  // LiPo 公称 [幅, 長さ, 厚み](例: DPTL-DTP502535 400 mAh)。要実測調整
 
 wall = 2;       // 側壁厚
 floor_t = 2.4;  // 底厚
@@ -22,6 +23,7 @@ chan_d = 1.4;   // 床の FPC/配線溝の深さ
 lid_t = 2;      // フタ厚
 skirt_h = 2.2;  // フタのスカート(嵌合部)高さ
 win_w = 14;     // アンテナ窓の幅
+ant_d = 0.6;    // フタ裏の Wi-Fi アンテナ用凹みの深さ
 
 iw = bat[0] + 2 * tol;                  // 内寸幅(バッテリー幅で決まる)
 bat_l  = bat[1] + 2 * tol;
@@ -63,7 +65,7 @@ module body() {
     // 仕切り(側方スタブのみ。中央はバッテリー配線 / FPC の通り道)
     divider(bat_l, gap = 10);
     divider(c5_y0 + c5_zone, gap = fpc_w + 1);
-    // C5 センタリングレール(内寸幅 25.6 → C5 ポケット 19.7)
+    // C5 センタリングレール(内寸幅 26.1 → C5 ポケット 19.7)
     rails(c5_y0, c5_zone, (iw - (c5_l + 2 * tol)) / 2);
     // UWB センタリングレール(→ ポケット 12.1)
     rails(uwb_y0, uwb_zone, (iw - (uwb_w + 2 * tol)) / 2);
@@ -101,6 +103,10 @@ module lid() {
         // アンテナ窓(UWB アンテナ上面を開放。端の壁開口とつながる)
         translate([iw / 2 - win_w / 2, uwb_y0 + 3, oh - skirt_h - 0.1])
             cube([win_w, il - (uwb_y0 + 3) + wall + 0.1, skirt_h + lid_t + 0.2]);
+        // Wi-Fi アンテナ用の凹み(フタ裏、C5 ゾーンの真上。長辺を幅方向に置く)
+        translate([(iw - (wifi_ant_w + 2 * tol)) / 2,
+                   c5_y0 + (c5_zone - (wifi_ant_h + 2 * tol)) / 2, oh - 0.1])
+            cube([wifi_ant_w + 2 * tol, wifi_ant_h + 2 * tol, ant_d + 0.1]);
         // USB スロット上の逃げ(フタを閉めたままケーブルを挿せる)
         translate([iw - 0.1, c5_y0 + (c5_zone - 11) / 2, oh - skirt_h - 0.1])
             cube([wall + 0.2, 11, skirt_h + 0.1]);

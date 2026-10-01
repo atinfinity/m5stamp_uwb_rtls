@@ -38,7 +38,7 @@
 
 - **国内での入手先**: スイッチサイエンスで[M5Stamp UWBモジュール(FPCコネクタ、FPCケーブル付き)M5STACK-S017-F](https://www.switch-science.com/products/11375)と[M5StampC5 DIP M5STACK-S016-DIP](https://www.switch-science.com/products/11352)が扱われており、本ドキュメントの想定構成と一致する。アンカー・タグとも同一ユニットなので、両方をノード台数分そろえる。
 - **Stamp C5「DIP」版のピンヘッダ**: DIP版には2.54mm-7Pピンヘッダ2本が付属するが、UWB FとはFPCで直結するため**はんだ付けは不要**。§4の3Dプリントモデルはヘッダなしの公称寸法で作っているので、ヘッダを付けるとケース・取付具に収まらない可能性がある。
-- **Wi-Fi用外付けアンテナ**: Stamp C5のWi-Fiは付属アンテナ(FPCアンテナ、2.4/5 GHz、IPEX-1、14.3×5.3 mm、ケーブル長50 mm。[公式ドキュメント](https://docs.m5stack.com/en/core/Stamp-C5)参照)をIPEX-1コネクタにつないで使う。Stamp C5に同梱されているので別途購入は不要。タグはWi-Fiテレメトリに必須(アンカーはWi-Fi不要)。現行の3DプリントモデルはWi-Fiアンテナの配置を考慮していないため、収めるときは取り回しを確認する(UWBアンテナ端と重ねない)。
+- **Wi-Fi用外付けアンテナ**: Stamp C5のWi-Fiは付属アンテナ(FPCアンテナ、2.4/5 GHz、IPEX-1、14.3×5.3 mm、ケーブル長50 mm。[公式ドキュメント](https://docs.m5stack.com/en/core/Stamp-C5)参照)をIPEX-1コネクタにつないで使う。Stamp C5に同梱されているので別途購入は不要。タグはWi-Fiテレメトリに必須(アンカーはWi-Fi不要)。タグ用ケースではフタ裏の凹みに貼る(§4.2)。
 - **LiPoバッテリーは別途必要**(タグのみ)。Stamp C5の充電電流は約200 mAなので、1C充電で200 mA以上を受け入れられる容量(目安400 mAh以上)を選ぶ。候補例(いずれもJST PH 2ピン、保護回路付き。2026年10月時点で品切れのため購入時に在庫を確認):
   - [リチウムイオンポリマー電池 400mAh](https://www.switch-science.com/products/3118)(DPTL-DTP502535、37×25.5×5.2 mm、約13 g)
   - [リチウムイオン電池 900mAh](https://www.switch-science.com/catalog/2073/)(54×36×6.2 mm、約24 g。充電電流0.5C=450 mA以下の指定も満たす)
@@ -87,4 +87,4 @@ OpenSCADソースとSTLを **[hardware/cad/](../hardware/cad/)** に置いてい
 
 ![タグ用ケース3Dモデル(本体とフタ)](assets/cad-tag-case.png)
 
-本体 + 摩擦嵌合フタの2部品([tag_case.scad](../hardware/cad/tag_case.scad) / STL: [本体](../hardware/cad/stl/tag_case_body.stl)・[フタ](../hardware/cad/stl/tag_case_lid.stl))。内部はLiPo | C5 | UWB Fの3室で、アンテナ端はケース端とフタの開口(アンテナ窓)により樹脂で覆われない。USB-Cは側壁スロットから充電・書き込み可能で、バッテリー端にストラップループ付き。LiPo寸法は`bat`パラメータで変更できる。
+本体 + 摩擦嵌合フタの2部品([tag_case.scad](../hardware/cad/tag_case.scad) / STL: [本体](../hardware/cad/stl/tag_case_body.stl)・[フタ](../hardware/cad/stl/tag_case_lid.stl))。内部はLiPo | C5 | UWB Fの3室で、アンテナ端はケース端とフタの開口(アンテナ窓)により樹脂で覆われない。USB-Cは側壁スロットから充電・書き込み可能で、バッテリー端にストラップループ付き。C5のWi-Fi用FPCアンテナはフタ裏の凹み(C5の真上)に貼る。LiPo寸法は`bat`パラメータで変更できる(既定は§1.4の400 mAh品)。
