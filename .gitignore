@@ -10,3 +10,5 @@ firmware/test_native/test_rtls_common
 firmware/test_native/test_rtls_solver
 firmware/test_native/parity
 firmware/test_native/test_rtls_config
+# pioarduino がビルド時に自動生成する ESP-IDF コンポーネント定義
+firmware/*/src/idf_component.yml
