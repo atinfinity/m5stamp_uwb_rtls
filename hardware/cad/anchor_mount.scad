@@ -20,7 +20,7 @@ pock_wall = 2;   // C5 ポケット壁厚
 pock_h = 4.5;    // C5 ポケット壁高さ
 uwb_wall = 1.5;  // UWB ポケット壁厚
 uwb_wall_h = 3;  // UWB ポケット壁高さ
-chan_d = 1.2;    // FPC 溝深さ
+chan_d = 1.2;    // FPC 溝深さ(C5 背面コネクタの突き出し 1.0 が収まる)
 
 c5_px = c5_w + 2 * tol;   // C5 ポケット内寸(幅)
 c5_pz = c5_l + 2 * tol;   // C5 ポケット内寸(高さ)
@@ -50,8 +50,9 @@ module anchor_mount() {
             translate([p[0], 0, p[1]]) rotate([-90, 0, 0]) screw_hole(plate_t);
         // FPC 溝(プレート前面、C5 ポケット床から上端まで)
         translate([-fpc_w / 2, plate_t - chan_d, c5_z0]) cube([fpc_w, chan_d + 0.1, plate_h - c5_z0 + 0.1]);
-        // FPC スリット(棚を貫通し UWB モジュール後端の下へ)
-        translate([-fpc_w / 2, plate_t - chan_d, plate_h - 0.1]) cube([fpc_w, 8 - (plate_t - chan_d), shelf_t + 0.2]);
+        // FPC スリット(棚を貫通し UWB モジュール後端の下へ。背面コネクタ全体が収まる奥行き)
+        slit_y1 = uwb_y0 + tol + uwb_conn_l + 0.5;
+        translate([-fpc_w / 2, plate_t - chan_d, plate_h - 0.1]) cube([fpc_w, slit_y1 - (plate_t - chan_d), shelf_t + 0.2]);
         // ケーブルタイ用スリット x2(USB ケーブルの張力止め)
         for (sx = [-1, 1])
             translate([sx * 5.5 - 1.1, -0.1, 18]) cube([2.2, plate_t + 0.2, 6]);

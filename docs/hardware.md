@@ -23,7 +23,7 @@
 |---|---|---|---|
 | [M5Stamp C5](https://shop.m5stack.com/products/m5stampc5-module-esp32-c5)(ESP32-C5) | メインMCU + Wi-Fiテレメトリ | 1 | Wi-Fi 6(2.4/5 GHz)対応。SGM40567充電IC・電池端子内蔵 |
 | [M5Stamp UWB F](https://shop.m5stack.com/products/m5stamp-uwb-module-with-fpc-qm33120w)(Qorvo QM33120W、FPC版) | UWB測距モジュール | 1 | 同上(FPCケーブル付属) |
-| LiPoバッテリー3.7 V 500〜1000 mAh | 電源 | 1 | Stamp C5のBAT端子に接続。充電はUSB-C経由 |
+| LiPoバッテリー3.7 V 400〜1000 mAh | 電源 | 1 | Stamp C5のVBAT/GNDパッドにはんだ付け。充電はUSB-C経由 |
 | タグ用ケース | 装着用筐体 | 1 | 3Dプリント(モデルは[hardware/cad/](../hardware/cad/)、§4参照)。アンテナ部を遮らない形状 |
 
 ### 1.3 共通(システム全体で)
@@ -33,6 +33,17 @@
 | PC(常設ならRaspberry Piも可) | 測位サーバー(Mosquitto + Python解算/可視化) | 1 | |
 | Wi-Fi AP(2.4/5 GHz) | タグ→サーバーのテレメトリ経路 | 1 | 既設流用可。アンカーはWi-Fi不要 |
 | レーザー距離計 | アンカー座標の測量・校正 | 1 | 推奨(±3 cm以内で座標登録するため) |
+
+### 1.4 購入時の注意
+
+- **国内での入手先**: スイッチサイエンスで[M5Stamp UWBモジュール(FPCコネクタ、FPCケーブル付き)M5STACK-S017-F](https://www.switch-science.com/products/11375)と[M5StampC5 DIP M5STACK-S016-DIP](https://www.switch-science.com/products/11352)が扱われており、本ドキュメントの想定構成と一致する。アンカー・タグとも同一ユニットなので、両方をノード台数分そろえる。
+- **Stamp C5「DIP」版のピンヘッダ**: DIP版には2.54mm-7Pピンヘッダ2本が付属するが、UWB FとはFPCで直結するため**はんだ付けは不要**。§4の3Dプリントモデルはヘッダなしの公称寸法で作っているので、ヘッダを付けるとケース・取付具に収まらない可能性がある。
+- **Wi-Fi用外付けアンテナ**: Stamp C5のWi-Fiは付属アンテナ(FPCアンテナ、2.4/5 GHz、IPEX-1、14.3×5.3 mm、ケーブル長50 mm。[公式ドキュメント](https://docs.m5stack.com/en/core/Stamp-C5)参照)をIPEX-1コネクタにつないで使う。Stamp C5に同梱されているので別途購入は不要。タグはWi-Fiテレメトリに必須(アンカーはWi-Fi不要)。タグ用ケースではフタ裏の凹みに貼る(§4.2)。
+- **LiPoバッテリーは別途必要**(タグのみ)。Stamp C5の充電電流は約200 mAなので、1C充電で200 mA以上を受け入れられる容量(目安400 mAh以上)を選ぶ。候補例(いずれもJST PH 2ピン、保護回路付き。2026年10月時点で品切れのため購入時に在庫を確認):
+  - [リチウムイオンポリマー電池 400mAh](https://www.switch-science.com/products/3118)(DPTL-DTP502535、37×25.5×5.2 mm、約13 g)
+  - [リチウムイオン電池 900mAh](https://www.switch-science.com/catalog/2073/)(54×36×6.2 mm、約24 g。充電電流0.5C=450 mA以下の指定も満たす)
+
+  Stamp C5にバッテリー用コネクタはなく、2.54 mmピッチのパッド列の**VBAT(+)とGND(−)**に配線する([公式ピン配置図](https://docs.m5stack.com/en/core/Stamp-C5_DIP)。部品面を上・USB-Cを手前にして左列の上から3V3 / G1 / G2 / G3 / **VBAT** / USB_5V / **GND**)。JST PHコネクタ付きの電池をそのまま使うなら、[JST PH 2ピン付きワイヤ](https://switch-science.com/catalog/2215)をパッドにはんだ付けして中継する。電池側の極性(赤=+)も挿す前に確認すること。§4のタグ用ケースはLiPo寸法を`bat`パラメータで変更できる。
 
 ## 2. 組み立て図
 
@@ -48,12 +59,13 @@ Stamp C5とStamp UWB Fは、UWB F付属の**0.5mm-12P FPCケーブル1本**で�
 
 ## 3. 組み立て手順
 
-1. **FPC接続**: Stamp C5背面とStamp UWB FのFPCコネクタに付属ケーブルを挿し、コネクタのロックを閉じる(アンカー・タグ共通)。
-2. **電源接続**:
+1. **FPC接続**: Stamp C5背面とStamp UWB FのFPCコネクタに付属ケーブルを挿し、コネクタのロックを閉じる(アンカー・タグ共通)。**ケーブルの向きを誤るとモジュールを破損するおそれがある**(製品ページの注意事項)ため、公式の接続図で向きを確認してから挿す。なお、UWB FのFPCピン配置はStamp-S3/S3Aとは互換性がない(Stamp C5とは一致する)。
+2. **Wi-Fiアンテナ接続**(タグ): Stamp C5のIPEX-1コネクタに付属アンテナを接続する。
+3. **電源接続**:
    - アンカー: USB ACアダプタまたはモバイルバッテリーからUSB Type-Cで常時給電。
-   - タグ: LiPoバッテリーをStamp C5のBAT端子へ接続(充電はUSB-C経由)。
-3. **ファームウェア書き込み**: USB-CでPCに接続し、[firmware/](../firmware/)の手順でanchor / tagを書き込む。
-4. **筐体・設置**: ケース・取付具(§4の3Dプリントモデル)に収める。以下のアンテナ取り扱いに注意する。
+   - タグ: LiPoバッテリーをStamp C5のVBAT/GNDパッドへ接続(§1.4。充電はUSB-C経由)。
+4. **ファームウェア書き込み**: USB-CでPCに接続し、[firmware/](../firmware/)の手順でanchor / tagを書き込む。
+5. **筐体・設置**: ケース・取付具(§4の3Dプリントモデル)に収める。以下のアンテナ取り扱いに注意する。
 
 ### アンテナ取り扱いの注意(重要)
 
@@ -75,4 +87,4 @@ OpenSCADソースとSTLを **[hardware/cad/](../hardware/cad/)** に置いてい
 
 ![タグ用ケース3Dモデル(本体とフタ)](assets/cad-tag-case.png)
 
-本体 + 摩擦嵌合フタの2部品([tag_case.scad](../hardware/cad/tag_case.scad) / STL: [本体](../hardware/cad/stl/tag_case_body.stl)・[フタ](../hardware/cad/stl/tag_case_lid.stl))。内部はLiPo | C5 | UWB Fの3室で、アンテナ端はケース端とフタの開口(アンテナ窓)により樹脂で覆われない。USB-Cは側壁スロットから充電・書き込み可能で、バッテリー端にストラップループ付き。LiPo寸法は`bat`パラメータで変更できる。
+本体 + 摩擦嵌合フタの2部品([tag_case.scad](../hardware/cad/tag_case.scad) / STL: [本体](../hardware/cad/stl/tag_case_body.stl)・[フタ](../hardware/cad/stl/tag_case_lid.stl))。内部はLiPo | C5 | FPC折り返し部 | UWB Fの順で、アンテナ端はケース端とフタの開口(アンテナ窓)により樹脂で覆われない。FPCケーブルはC5の上を渡して折り返し部で床に下ろす(経路の詳細は[hardware/cad/README.md](../hardware/cad/README.md))。USB-Cは側壁スロットから充電・書き込み可能で、バッテリー端にストラップループ付き。C5のWi-Fi用FPCアンテナはフタ裏の凹み(C5の上、+x寄り)に貼る。LiPo寸法は`bat`パラメータで変更できる(既定は§1.4の400 mAh品)。
