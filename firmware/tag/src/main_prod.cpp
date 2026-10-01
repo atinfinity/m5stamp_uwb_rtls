@@ -361,7 +361,7 @@ void setup() {
         applyAnchorsJson(json.c_str(), /*persist=*/false);
     }
 
-    while (!uwb.begin(rtls::makeUwbConfig())) {
+    while (!uwb.begin(rtls::makeUwbConfig(), rtls::makePhyConfig())) {
         Serial.printf("# uwb begin failed: %s — retrying\n", uwb.lastErrorName());
         uwb.hardReset();
         delay(1000);

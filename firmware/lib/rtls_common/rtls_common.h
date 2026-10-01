@@ -56,6 +56,19 @@ inline M5Stamp_UWBConfig makeUwbConfig() {
     return config;
 }
 
+// ---- UWB PHY ----
+// Ch9 (7.9872 GHz) を明示する (rtls-design.md §3.4)。ライブラリ既定も Ch9 だが、公式ドキュメント
+// には Channel 5 の記載があり既定値が変わり得るため固定する。Ch5 (6.5 GHz) は国内で使用不可。
+// ライブラリは channel のみ変更した場合にそのチャネルの推奨プロファイルを適用し、他フィールドを
+// 変えると全体を指定値で使う仕様のため、ここでは channel 以外を触らないこと。
+constexpr M5Stamp_UWBChannel kUwbChannel = M5Stamp_UWBChannel::Channel9;
+
+inline M5Stamp_UWBPHYConfig makePhyConfig() {
+    M5Stamp_UWBPHYConfig phy;
+    phy.channel = kUwbChannel;
+    return phy;
+}
+
 // ---- SS-TWR タイミング (ss-twr-design.md §3, 公式サンプル準拠) ----
 constexpr uint32_t kSsResponseRxAfterTxDelayUus = 500;
 constexpr uint32_t kSsResponseTxDelayUus        = 3000;
