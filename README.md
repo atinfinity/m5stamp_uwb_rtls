@@ -5,7 +5,7 @@
 M5Stack Stamp UWB (Qorvo QM33120W) + Stamp C5による屋内2D RTLS(リアルタイム測位システム)。
 
 > [!CAUTION]
-> 本プロジェクトは、データシート・公式ドキュメント・公式サンプルコードなどの公開情報をもとに実装しています。実機で確認できているのは、ファームウェアの書き込み・起動・UWB の初期化と、2台での1対1の測距の疎通までです([#54](https://github.com/atinfinity/m5stamp_uwb_rtls/issues/54))。測距精度、複数アンカーでの測位、本番モード(Wi-Fi/MQTT)、3Dプリントモデルの寸法などはまだ確認しておらず、実機では動作しない・調整が必要となる可能性があります。
+> 本プロジェクトは、データシート・公式ドキュメント・公式サンプルコードなどの公開情報をもとに実装しています。実機で確認できているのは、ファームウェアの書き込み・起動・UWB の初期化、本番モード(Wi-Fi/MQTT/SNTP/コマンド/NVS)の基本動作([#54](https://github.com/atinfinity/m5stamp_uwb_rtls/issues/54))、2アンカーまでの巡回測距(DS-TWR / SS-TWR、[#1](https://github.com/atinfinity/m5stamp_uwb_rtls/issues/1) / [#14](https://github.com/atinfinity/m5stamp_uwb_rtls/issues/14))、TDoA の時刻同期の PoC([#16](https://github.com/atinfinity/m5stamp_uwb_rtls/issues/16))までです。既知距離での測距精度、3台以上のアンカーでの測位、3Dプリントモデルの寸法([#49](https://github.com/atinfinity/m5stamp_uwb_rtls/issues/49))などはまだ確認しておらず、実機では動作しない・調整が必要となる可能性があります。
 
 > [!NOTE]
 > 本プロジェクトは**非公式の個人プロジェクト**です。M5Stack社・Qorvo社およびその関連企業とは一切関係ありません。
