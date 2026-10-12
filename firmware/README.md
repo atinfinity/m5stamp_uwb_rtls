@@ -178,7 +178,8 @@ blink_tx 1台 + listener 2台(それぞれPCにシリアル接続しCSVを採取
 
 ```bash
 uv run python tools/tdoa/sync_analysis.py anchorA.csv anchorB.csv
-# → クロック offset/drift 推定と残留 σ。判定: σ < 2 ns (≈ 60 cm 相当, tdoa-design.md §6 の 2.)
+# → クロック offset/drift 推定と、前後のマスターブリンクからの内挿誤差 σ。
+#   判定: 内挿誤差 σ < 2 ns (≈ 60 cm 相当, tdoa-design.md §6 の 2.)。実測は §7.3
 # タグ模擬の blink_tx (addr を 0x0001 に変更) を追加した場合:
 uv run python tools/tdoa/sync_analysis.py anchorA.csv anchorB.csv --tag-src 0x0001
 ```
