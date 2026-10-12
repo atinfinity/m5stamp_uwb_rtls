@@ -41,8 +41,8 @@ constexpr uint32_t kDsHostTimeoutMs                  = 100;
 // 公式 DS_TWR_MULTI_ANCHOR 例に合わせて 1 とする (Issue #43)。
 constexpr uint8_t  kDsResultRepeatCount              = 1;
 constexpr uint32_t kDsResultRepeatGapMs              = 3;
-// 巡回中のアンカー切替ギャップ [ms]。前アンカーが TX→RX に戻る猶予 (公式例は 20 ms だが
-// 4 台 × 20 ms ではスロット予算 90 ms を超えるため小さく始め、Step 1 で実測して確定)。
+// 巡回中のアンカー切替ギャップ [ms]。前アンカーが TX→RX に戻る猶予 (公式例は 20 ms)。
+// 0 ms では 2 台目の成功率が落ち、2 ms 以上では変わらなかった (ds-twr-design.md §7.5)。
 constexpr uint32_t kDsInterAnchorGapMs               = 2;
 
 // USB シリアル (USB-Serial/JTAG の HWCDC) を開始する。PC に USB 接続したままポートを
