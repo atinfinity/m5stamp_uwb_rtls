@@ -70,12 +70,21 @@ inline M5Stamp_UWBConfig makeUwbConfig() {
 // Ch9 (7.9872 GHz) を明示する (rtls-design.md §3.4)。ライブラリ既定も Ch9 だが、公式ドキュメント
 // には Channel 5 の記載があり既定値が変わり得るため固定する。Ch5 (6.5 GHz) は国内で使用不可。
 // ライブラリは channel のみ変更した場合にそのチャネルの推奨プロファイルを適用し、他フィールドを
-// 変えると全体を指定値で使う仕様のため、ここでは channel 以外を触らないこと。
+// 変えると全体を指定値で使う。ここではデータレートとプリアンブルも変えるため後者になる。
+// 列挙していないフィールドは M5Stamp_UWBPHYConfig の既定値 (Ch9 推奨プロファイルと同じ) のまま。
 constexpr M5Stamp_UWBChannel kUwbChannel = M5Stamp_UWBChannel::Channel9;
 
+// 850 kbps / プリアンブル 256 (ds-twr-design.md §3.2, §7)。既定の 6.8 Mbps / 128 では
+// データ部の復号失敗が多く、DS-TWR の成功率が 15〜20% に留まった (Issue #1)。
+// この設定で 87%。プリアンブル 512 は 88% で改善が小さく、交換時間が 1 ms 延びるため採らない。
 inline M5Stamp_UWBPHYConfig makePhyConfig() {
     M5Stamp_UWBPHYConfig phy;
-    phy.channel = kUwbChannel;
+    phy.channel        = kUwbChannel;
+    phy.dataRate       = M5Stamp_UWBDataRate::Rate850K;
+    phy.preambleLength = M5Stamp_UWBPreambleLength::Len256;
+    phy.pacSize        = M5Stamp_UWBPacSize::Pac16;
+    // SFD タイムアウト = プリアンブル長 + 1 + SFD 長 - PAC = 256 + 1 + 8 - 16
+    phy.sfdTimeout = 249;
     return phy;
 }
 

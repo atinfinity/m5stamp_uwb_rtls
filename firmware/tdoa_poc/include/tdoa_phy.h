@@ -9,12 +9,13 @@
 
 namespace tdoa {
 
-// listener と blink_tx は必ず同じ設定を使うこと (データレートが違うと復号できない)。
-// channel 以外を変えるとライブラリは推奨プロファイルではなく全フィールドを指定値で使うため、
-// データレート以外は M5Stamp_UWBPHYConfig の既定値 (Ch9 推奨値と同じ) のままにする。
+// listener と blink_tx は必ず同じ設定を使うこと (データレートやプリアンブルが違うと復号できない)。
+// 実測した 850 kbps / プリアンブル 128 を明示する。TWR 系 (rtls::makePhyConfig()) は
+// プリアンブル 256 なので、anchor/tag ファームとは相互に受信できない。
 inline M5Stamp_UWBPHYConfig makePhyConfig() {
     M5Stamp_UWBPHYConfig phy = rtls::makePhyConfig();
-    phy.dataRate             = M5Stamp_UWBDataRate::Rate850K;
+    phy.preambleLength       = M5Stamp_UWBPreambleLength::Len128;
+    phy.pacSize              = M5Stamp_UWBPacSize::Pac8;
     // SFD タイムアウト = プリアンブル長 + 1 + SFD 長 - PAC = 128 + 1 + 8 - 8
     phy.sfdTimeout = 129;
     return phy;

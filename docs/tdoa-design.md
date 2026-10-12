@@ -145,7 +145,7 @@ Issue [#16](https://github.com/atinfinity/m5stamp_uwb_rtls/issues/16)。blink_tx
 | 6.8 Mbps(既定) | 10〜72%(配置で大きく変動) |
 | 850 kbps | 84〜93.5% |
 
-このため、PoCファーム(`firmware/tdoa_poc/include/tdoa_phy.h`)は850 kbpsを使う。TWR系ファーム(anchor/tag)は6.8 Mbpsのままで、データレートが異なるため相互には通信できない。
+このため、PoCファーム(`firmware/tdoa_poc/include/tdoa_phy.h`)は850 kbps / プリアンブル128を使う。TWR系ファーム(anchor/tag)も850 kbpsに揃えたが、プリアンブルは256のため(ds-twr-design.md §7)、相互には通信できない。
 
 **エアタイム**(PSDU 16 byte = ヘッダ9 + ペイロード5 + FCS 2、PRF 64 MHz):
 

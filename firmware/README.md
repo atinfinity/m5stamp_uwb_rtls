@@ -169,8 +169,8 @@ pio run -e listener -t upload    # ノード2: 受信 + "src,seq,rx_ticks" を C
 (増加しない/常に同値なら`receiveFrame()`実装がレジスタを上書きしており、ライブラリ改造が必要)。
 
 > [!NOTE]
-> tdoa_pocのPHYは850 kbps(`include/tdoa_phy.h`)。6.8 Mbpsではブリンクの取りこぼしが多いため(tdoa-design.md §7.2)。
-> anchor/tagファーム(6.8 Mbps)とはデータレートが異なり通信できないので、PoCの全ノードにtdoa_pocのファームを書き込む。
+> tdoa_pocのPHYは850 kbps / プリアンブル128(`include/tdoa_phy.h`)。6.8 Mbpsではブリンクの取りこぼしが多いため(tdoa-design.md §7.2)。
+> anchor/tagファーム(850 kbps / プリアンブル256)とはプリアンブル長が異なり通信できないので、PoCの全ノードにtdoa_pocのファームを書き込む。
 
 **PoC-2(3ノード): 2アンカー無線同期**
 
