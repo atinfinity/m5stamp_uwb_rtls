@@ -15,6 +15,17 @@
 
 Python本体はuvが自動で用意する(`requires-python >= 3.12`。3.14で動作確認済み)。
 
+### PlatformIOの導入確認
+
+```bash
+pio --version     # PlatformIO Core 6.1.x 以上
+```
+
+- VS CodeのPlatformIO拡張で導入した場合、`pio`は`~/.platformio/penv/bin/`にあり**PATHが通っていない**。
+  `export PATH="$HOME/.platformio/penv/bin:$PATH"`をシェルの設定(`~/.zshrc`など)に追加するか、フルパスで実行する
+- ESP32-C5用のplatform・ツールチェーン・ライブラリは各`platformio.ini`の指定に従って初回ビルド時に自動取得される
+  (別途インストール不要。バージョン固定の方針は[firmware/README.md](../firmware/README.md)参照)
+
 ## 2. セットアップ
 
 ```bash
@@ -29,8 +40,18 @@ uv sync --all-extras     # .venv 作成 + 全依存 (mqtt/web extras + dev グ�
 uv run pytest                     # Python 全テスト (解算・セル・Web API・e2e 回帰・C++ 一致試験)
 ./firmware/test_native/run.sh     # FW 共通ロジック (スロット/JSON) + C++ ソルバーのホストテスト
 pio run -d firmware/anchor        # アンカー FW の ESP32-C5 ビルド (実機不要、初回はツールチェーン取得で数分)
-pio run -d firmware/tag           # タグ FW (本番 env:tag + 計測 env:tag_step1 の両方)
+pio run -d firmware/tag           # タグ FW (既定の env:tag のみ)
 ```
+
+`pio run`は各`platformio.ini`の`default_envs`だけをビルドする。他のenv(`tag_step1`・`anchor_ss`・
+`tdoa_poc`の`blink_tx`など、一覧は[firmware/README.md](../firmware/README.md))は`-e`で指定する:
+
+```bash
+pio run -d firmware/tag -e tag_step1
+pio run -d firmware/tdoa_poc -e blink_tx -e listener
+```
+
+実機への書き込み・シリアルモニタは[firmware/README.md](../firmware/README.md)の「ビルドと書き込み」を参照。
 
 - `uv run pytest`には**C++ 一致試験**(`tests/test_cpp_parity.py`)が含まれ、`c++`コンパイラを使って
   `firmware/lib/rtls_solver`をビルド・実行する。Python実装とC++ 実装のどちらかだけを変更すると失敗する
@@ -95,6 +116,7 @@ tests/           pytest (e2e 回帰・C++ 一致試験含む)
 | 症状 | 原因と対処 |
 |---|---|
 | ブラウザでUIが "disconnected" のまま | `uv sync --all-extras`を実行したか確認(WebSocketは`websockets`パッケージが必要。web extrasに含まれる) |
+| `pio: command not found` | VS Code拡張で導入したPlatformIOはPATH外にある。§1の「PlatformIOの導入確認」を参照 |
 | `pio run`がboard不明で失敗 | pioarduino platformの取得失敗。ネットワークを確認して`pio run`を再実行(URLは各platformio.iniに記載) |
 | 一致試験だけ失敗する | PythonかC++ の片側だけ解算を変更していないか確認。両方直すかrevertする |
 | ポート1883/8000が使用中 | §4のポート変更手順を使う |

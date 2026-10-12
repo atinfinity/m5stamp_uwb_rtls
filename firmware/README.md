@@ -56,9 +56,27 @@ pio run -e tag_step1 -t upload
 ```
 
 アドレス・測距間隔は各`platformio.ini`の`build_flags`(`NODE_ADDR` / `TARGET_ANCHOR` / `RANGE_INTERVAL_MS`)で変更する。
+複数台に書き込むときは**1台ごとに`NODE_ADDR`を書き換えて**から書き込む(重複させない。[configuration.md](../docs/configuration.md)参照)。
+
+### 書き込み・シリアルモニタの基本操作
+
+PlatformIOの導入は[docs/development.md](../docs/development.md) §1を参照。M5Stamp C5をUSB-CでPCに接続し、
+各プロジェクトのディレクトリ(`firmware/anchor`など)で実行する:
+
+```bash
+pio device list                                       # 接続ポートの確認 (macOS: /dev/cu.usbmodem*、Linux: /dev/ttyACM*)
+pio run -e anchor -t upload                           # ビルド + 書き込み (ポートは自動検出)
+pio run -e anchor -t upload --upload-port /dev/cu.usbmodemXXXX   # 複数台接続時はポートを明示
+pio device monitor                                    # シリアルモニタ (115200 bps、Ctrl+C で終了)
+pio run -e anchor -t upload -t monitor                # 書き込み後そのままモニタ
+```
+
+- `-e`を省略すると`default_envs`(anchor: `anchor` / tag: `tag` / tdoa_poc: `listener`)が対象になる
+- ESP32-C5はUSB直結のため、通常は追加のUSBシリアルドライバは不要
 
 > **注**: board定義は汎用の`esp32-c5-devkitc-1`を使用している。書き込みに失敗する場合は
-> `pio device list`でポートを確認し、`upload_port`を明示すること。
+> `pio device list`でポートを確認し、`upload_port`を明示すること。ポート自体が見えない・接続できない場合は、
+> データ通信対応のUSBケーブルか確認し、BOOTボタンを押しながらUSBを接続してダウンロードモードで起動してから再実行する。
 
 ## 計測手順(ds-twr-design.md §6の1. と2.)
 
