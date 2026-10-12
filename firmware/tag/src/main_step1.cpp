@@ -7,6 +7,7 @@
 //   env:tag_step1_ss  … SS-TWR (-DUSE_SS_TWR)。CSV 形式は共通で、
 //                       ヘッダ行の mode= により解析側 (analyze.py) が区別する。
 // SS-TWR の検証観点 (CFO 補償の有無 = 静的誤差) は ss-twr-design.md §2.2/§6。
+// SS の d_mm はタグ側で CFO 補正済み (rtls_ss_cfo.h)。
 //
 // 対象アンカー:
 //   -DTARGET_ANCHOR=0x0010                  … 1 対 1 (従来どおり)
@@ -30,6 +31,13 @@
 #include <Arduino.h>
 #include <M5Stamp_UWB.h>
 #include <rtls_common.h>
+#include <rtls_ss_cfo.h>
+
+#ifdef USE_SS_TWR
+extern "C" {
+#include "qm33120w_sdk/deca_device_api.h"
+}
+#endif
 
 #ifndef NODE_ADDR
 #define NODE_ADDR 0x0001
@@ -100,6 +108,12 @@ void loop() {
         const uint32_t t0     = micros();
 #ifdef USE_SS_TWR
         M5Stamp_UWBRangeResult res = uwb.requestRange(rtls::makeSsRangeConfig(NODE_ADDR, anchor));
+        if (res.success) {
+            // ライブラリは CFO 補償をしないため、Response 受信時のクロックオフセットで補正する
+            // (ss-twr-design.md §2.2)。次の受信までオフセットのレジスタは保持される。
+            res.distanceMm = rtls::ssCfoCorrectedMm(res.distanceMm, dwt_readclockoffset(),
+                                                    rtls::kSsResponseTxDelayUus);
+        }
 #else
         M5Stamp_UWBDSRangeResult res = uwb.requestDSRange(rtls::makeDsRangeConfig(NODE_ADDR, anchor));
 #endif
