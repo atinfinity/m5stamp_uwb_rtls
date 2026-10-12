@@ -22,7 +22,7 @@ static uint32_t okCount  = 0;
 static uint32_t errCount = 0;
 
 void setup() {
-    Serial.begin(115200);
+    rtls::beginSerial(115200);
     delay(1000);
     while (!uwb.begin(rtls::makeUwbConfig(), rtls::makePhyConfig())) {
         Serial.printf("# uwb begin failed: %s — retrying\n", uwb.lastErrorName());
