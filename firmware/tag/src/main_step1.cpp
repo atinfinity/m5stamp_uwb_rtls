@@ -14,7 +14,8 @@
 //   -DTARGET_ANCHORS=0x0010,0x0011,0x0012   … 複数アンカー巡回 (Issue #43)。
 //                                              1 サイクルで全アンカーを順に測距する
 //   -DINTER_ANCHOR_GAP_MS=2                 … アンカー切替ギャップ [ms]
-//                                              (既定 rtls::kDsInterAnchorGapMs)
+//                                              (既定 DS: rtls::kDsInterAnchorGapMs /
+//                                                   SS: rtls::kSsInterAnchorGapMs)
 //
 // CSV 列: seq,anchor,ok,d_mm,elapsed_ms,exchange_us,cycle_us,err
 //   seq         サイクル通し番号 (同一サイクルの全アンカー行で共通)
@@ -52,7 +53,11 @@ extern "C" {
 #define RANGE_INTERVAL_MS 50
 #endif
 #ifndef INTER_ANCHOR_GAP_MS
+#ifdef USE_SS_TWR
+#define INTER_ANCHOR_GAP_MS rtls::kSsInterAnchorGapMs
+#else
 #define INTER_ANCHOR_GAP_MS rtls::kDsInterAnchorGapMs
+#endif
 #endif
 
 static M5Stamp_UWB uwb;

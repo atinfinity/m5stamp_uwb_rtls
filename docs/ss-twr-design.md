@@ -62,6 +62,7 @@ err ≈ 40e-6 × 3000 µs / 2 = 60 ns  →  距離誤差 ≈ 18 m(!)
 
 - アドレス・PAN・PHY設定、リトライ方針、TDMA統合は**DS-TWR設計(ds-twr-design.md §3.2, §3.4, §5)と同一**。タグの巡回ループで呼ぶ関数が`requestDSRange` → `requestRange`に変わるだけにする(`ranging.cpp`内で方式をビルドフラグではなく**設定値**で切替可能にし、フィールドでA/B比較できるようにする)。
 - タイミング初期値: `responseTxDelayUus`(定数`kSsResponseTxDelayUus`)3000 µs、RXタイムアウト(`kSsRxTimeoutUus`)4500 µs(公式サンプル準拠。確定値は`rtls_common.h`の`kSs*`定数を正とする)。
+- アンカー間ギャップ(`kSsInterAnchorGapMs`)は**5 ms**。DS-TWRの`kDsInterAnchorGapMs`(2 ms)とは別に持つ。2 msでは切替の余裕が足りなかった(§7.1)。
 
 ## 4. DS-TWRからの切替判断
 
@@ -121,6 +122,6 @@ Issue [#14](https://github.com/atinfinity/m5stamp_uwb_rtls/issues/14)。2台(ア
 - **2 ms**は成功率は1台のとき(91.3%)と同程度だが、2台目の失敗が1台目の失敗の直後に偏る(独立なら差は出ない)。サイクル時間もばらつく(p95 12.2 ms)。切替の余裕がぎりぎり
 - **5 ms以上**で偏りが消え、2台目の成功率は94% 台で頭打ちになる。サイクル時間も一定になる
 - 1交換は4.4 msのまま(アンカー数で変わらない)。距離の中央値はギャップによらず0x0010が109〜123 mm、0x0011が184〜195 mm(実距離は未計測)
-- **推奨**: SS-TWRのアンカー間ギャップは**5 ms**。4アンカーのサイクルは 4 × 4.4 + 3 × 5 ≈ 33 msで、スロット有効幅90 msに収まる(DS-TWRの2 msでの約43 msより短い)。DS-TWRの`kDsInterAnchorGapMs`(2 ms)も同じ傾向がないかは、DSで同じ比較をして確かめる(ds-twr-design.md §6の5.)
+- **採用**: SS-TWRのアンカー間ギャップは**5 ms**(`kSsInterAnchorGapMs`)。4アンカーのサイクルは 4 × 4.4 + 3 × 5 ≈ 33 msで、スロット有効幅90 msに収まる(DS-TWRの2 msでの約43 msより短い)。DS-TWRの`kDsInterAnchorGapMs`(2 ms)も同じ傾向がないかは、DSで同じ比較をして確かめる(ds-twr-design.md §6の5.)
 
 - **未了**: 実距離に対するbias(判定①の残り)と温度依存は、既知距離での実測で確認する。判定③(CEP比較)は2次元測位に必要なアンカー3台 + タグ(計4台)が揃ってから

@@ -95,6 +95,9 @@ constexpr uint32_t kSsResponseRxAfterTxDelayUus = 500;
 constexpr uint32_t kSsResponseTxDelayUus        = 3000;
 constexpr uint32_t kSsRxTimeoutUus              = 4500;
 constexpr uint32_t kSsHostTimeoutMs             = 100;
+// 巡回中のアンカー切替ギャップ。2 ms では 2 台目の失敗が 1 台目の失敗直後に偏り、
+// 5 ms 以上で解消した (ss-twr-design.md §7.1)。
+constexpr uint32_t kSsInterAnchorGapMs          = 5;
 
 inline M5Stamp_UWBRangeConfig makeSsRangeConfig(uint16_t initiator, uint16_t responder) {
     M5Stamp_UWBRangeConfig range;
