@@ -6,6 +6,11 @@ tdoa-design.md §3.2 の「リファレンスアンカー方式」のオフラ�
 クロック offset / drift を推定し、補正後の残留誤差 σ を算出する。
 σ < 2 ns (≈ 60 cm) が PoC-2 の目標 (tdoa-design.md §6 の 2.)。1 ns ≈ 30 cm。
 
+判定に使うのは「前後のマスターブリンクからの内挿誤差」(interp_residual)。
+水晶の drift は数分で 0.1 ppm 単位で動く (tdoa-design.md §7.3) ため、観測全体を
+1 本の直線で近似した残差 (fit_clock) は µs 級になり、同期品質を表さない。
+実運用でもマスターブリンク (100 ms) ごとに同期を取り直すので、内挿で評価する。
+
 使い方:
     uv run python tools/tdoa/sync_analysis.py anchorA.csv anchorB.csv \
         [--master-src 0x00F0] [--tag-src 0x0001]
@@ -77,6 +82,25 @@ def corrected_delta(t_a: np.ndarray, t_b: np.ndarray, offset: float,
     return t_b - (offset + (1.0 + drift) * t_a)
 
 
+def interp_residual(t_a: np.ndarray, t_b: np.ndarray) -> np.ndarray:
+    """各マスターブリンク k の (tB − tA) を前後 k−1, k+1 から線形内挿したときの誤差 [ns]。
+
+    タグブリンクを前後のマスターブリンクで補正するときの同期誤差の目安になる
+    (内挿に使う 2 点の雑音も含むため、タイムスタンプ 1 組の雑音の約 √1.5 倍)。
+    """
+    if len(t_a) < 3:
+        return np.array([])
+    y = t_b - t_a
+    w = (t_a[1:-1] - t_a[:-2]) / (t_a[2:] - t_a[:-2])
+    return y[1:-1] - (y[:-2] + w * (y[2:] - y[:-2]))
+
+
+def interp_delta(tag_a: np.ndarray, tag_b: np.ndarray, t_a: np.ndarray,
+                 t_b: np.ndarray) -> np.ndarray:
+    """タグブリンクの到達時刻差を、前後のマスターブリンクで内挿補正した値 [ns]。"""
+    return (tag_b - tag_a) - np.interp(tag_a, t_a, t_b - t_a)
+
+
 def join(a: dict[int, float], b: dict[int, float]) -> tuple[np.ndarray, np.ndarray]:
     seqs = sorted(set(a) & set(b))
     return (np.array([a[s] for s in seqs]), np.array([b[s] for s in seqs]))
@@ -89,13 +113,17 @@ def analyze(path_a: str, path_b: str, master_src: int, tag_src: int | None) -> i
         print(f"マスターブリンクの共通受信が {len(ta)} 件しかありません (要 10+)")
         return 1
     offset, drift, sigma = fit_clock(ta, tb)
+    e = interp_residual(ta, tb)
+    sigma_i = float(e.std(ddof=1))
     span_s = (ta[-1] - ta[0]) / 1e9
     print(f"マスターブリンク共通受信: {len(ta)} 件 (観測 {span_s:.1f} s)")
     print(f"  クロック offset: {offset * 1e-6:.3f} ms")
-    print(f"  クロック drift : {drift * 1e6:+.3f} ppm")
-    print(f"  残留 σ         : {sigma:.3f} ns (≈ {sigma * 30:.1f} cm)")
-    verdict = "PASS" if sigma < 2.0 else "FAIL"
-    print(f"  PoC-2 判定 (σ < 2 ns): {verdict}")
+    print(f"  クロック drift : {drift * 1e6:+.3f} ppm (観測全体の平均)")
+    print(f"  参考: 全体を 1 本の直線で近似した残留 σ: {sigma:.3f} ns")
+    print(f"  内挿誤差 σ     : {sigma_i:.3f} ns (≈ {sigma_i * 30:.1f} cm)"
+          f"  p99 {np.percentile(np.abs(e), 99):.2f} ns  max {np.abs(e).max():.2f} ns")
+    verdict = "PASS" if sigma_i < 2.0 else "FAIL"
+    print(f"  PoC-2 判定 (内挿誤差 σ < 2 ns): {verdict}")
 
     if tag_src is not None:
         tta, ttb = join(load_listener_csv(path_a, tag_src),
@@ -103,26 +131,32 @@ def analyze(path_a: str, path_b: str, master_src: int, tag_src: int | None) -> i
         if len(tta) == 0:
             print(f"タグ (0x{tag_src:04X}) の共通受信がありません")
         else:
-            d = corrected_delta(tta, ttb, offset, drift)
-            print(f"タグブリンク共通受信: {len(tta)} 件")
+            d = interp_delta(tta, ttb, ta, tb)
+            print(f"タグブリンク共通受信: {len(tta)} 件 (前後のマスターブリンクで内挿補正)")
             print(f"  補正後 Δt: 平均 {d.mean():.3f} ns  σ {d.std(ddof=1):.3f} ns"
                   f" (≈ {d.std(ddof=1) * 30:.1f} cm)")
-    return 0 if sigma < 2.0 else 2
+    return 0 if sigma_i < 2.0 else 2
 
 
 # ---- 自己試験 (実機レス): 合成クロックで推定が復元できることを確認 ----
 
 def make_synthetic(n: int = 300, interval_ns: float = 100e6, offset_ns: float = 1.5e6,
                    drift: float = 3e-6, jitter_ns: float = 0.3,
-                   start_ticks: int = 0, seed: int = 0) -> tuple[str, str]:
-    """2 リスナー分の CSV 文字列を返す (40bit 周回を含む)。"""
+                   start_ticks: int = 0, seed: int = 0,
+                   drift_rate: float = 0.0) -> tuple[str, str]:
+    """2 リスナー分の CSV 文字列を返す (40bit 周回を含む)。
+
+    drift_rate: drift の時間変化 [1/s] (水晶の暖機などで drift がゆっくり動く状況)。
+    """
     rng = np.random.default_rng(seed)
     lines_a = ["src,seq,rx_ticks"]
     lines_b = ["src,seq,rx_ticks"]
     for i in range(n):
         t = i * interval_ns
         t_a = t + rng.normal(0, jitter_ns)
-        t_b = offset_ns + (1 + drift) * t + rng.normal(0, jitter_ns)
+        t_s = t * 1e-9
+        t_b = (offset_ns + (1 + drift) * t + 0.5 * drift_rate * t_s * t_s * 1e9
+               + rng.normal(0, jitter_ns))
         ticks_a = (start_ticks + int(round(t_a / TICK_NS))) % WRAP_TICKS
         ticks_b = (start_ticks + int(round(t_b / TICK_NS))) % WRAP_TICKS
         lines_a.append(f"0x00F0,{i},{ticks_a}")

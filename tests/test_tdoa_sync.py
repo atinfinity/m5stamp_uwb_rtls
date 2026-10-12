@@ -49,3 +49,33 @@ def test_missing_and_foreign_rows_ignored(tmp_path):
     (tmp_path / "a.csv").write_text(csv)
     t = sa.load_listener_csv(tmp_path / "a.csv", 0x00F0)
     assert set(t.keys()) == {1, 2}
+
+
+def test_interp_tolerates_drift_wander(tmp_path):
+    """drift が観測中に動いても、内挿誤差はジッタ程度に収まる (全体直線近似は破綻する)。"""
+    # 120 s で drift が 0.48 ppm 動く (PoC-2 実測と同程度)
+    a, b = sa.make_synthetic(n=1200, drift=3.2e-6, drift_rate=4e-9, jitter_ns=0.3, seed=5)
+    (tmp_path / "a.csv").write_text(a)
+    (tmp_path / "b.csv").write_text(b)
+    ta, tb = sa.join(sa.load_listener_csv(tmp_path / "a.csv", 0x00F0),
+                     sa.load_listener_csv(tmp_path / "b.csv", 0x00F0))
+    _, _, sigma_fit = sa.fit_clock(ta, tb)
+    e = sa.interp_residual(ta, tb)
+    assert sigma_fit > 100                    # 1 本の直線では µs 級に崩れる
+    assert len(e) == len(ta) - 2
+    assert e.std() < 0.3 * np.sqrt(2 * 1.5) * 1.2  # √1.5 × (1 組の雑音 √2·jitter)
+
+
+def test_interp_delta_recovers_tag_tdoa(tmp_path):
+    """タグブリンクの到達時刻差を、前後のマスターブリンクで補正して復元できる。"""
+    a, b = sa.make_synthetic(n=300, drift=3e-6, drift_rate=4e-9, jitter_ns=0.0, seed=1)
+    (tmp_path / "a.csv").write_text(a)
+    (tmp_path / "b.csv").write_text(b)
+    ta, tb = sa.join(sa.load_listener_csv(tmp_path / "a.csv", 0x00F0),
+                     sa.load_listener_csv(tmp_path / "b.csv", 0x00F0))
+    # マスターブリンクの中間 (50 ms 後) に、真の到達時刻差 +5 ns のタグブリンクを置く
+    tag_a = ta[:-1] + 50e6
+    master_b = np.interp(tag_a, ta, tb - ta) + tag_a
+    tag_b = master_b + 5.0
+    d = sa.interp_delta(tag_a, tag_b, ta, tb)
+    assert np.allclose(d, 5.0, atol=0.2)
