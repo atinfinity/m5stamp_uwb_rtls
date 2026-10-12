@@ -146,6 +146,7 @@ uv run python tools/step1/analyze.py logs/ds_dist5m.csv logs/ss_dist5m.csv   # D
 | ② | 交換時間がDS比30% 以上短い | analyze.pyのp50を比較 |
 | ③ | リプレイでCEP50 ≤ 30 cm維持 | Step 2以降のログで確認 |
 
+- ライブラリの`requestRange()`はクロックオフセット補償をしないため、`tag_step1_ss`のd_mmはタグ側で補正済み(`rtls_ss_cfo.h`、ss-twr-design.md §2.2)
 - biasは方式ごとに異なりうるため、**DS/SS別々に校正値を記録**する
 - 温度依存(始動直後vs 30分後)もss-twr-design.md §6の1. に従い両方式で採取する
 - 不成立の場合は実測値をss-twr-design.mdに追記してIssue [#14](https://github.com/atinfinity/m5stamp_uwb_rtls/issues/14)をclose

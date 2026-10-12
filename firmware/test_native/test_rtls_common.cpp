@@ -6,6 +6,7 @@
 
 #include "rtls_msg.h"
 #include "rtls_slots.h"
+#include "rtls_ss_cfo.h"
 
 using namespace rtls;
 
@@ -95,6 +96,19 @@ static void test_parse_anchors_json() {
     assert(parseAnchorsJson("{\"anchors\":[]}", out, 8) == 0);
 }
 
+static void test_ss_cfo_correction() {
+    // オフセット 0 なら補正なし
+    assert(ssCfoCorrectedMm(1234, 0, 3000) == 1234);
+    // Issue #14 の実測: ratio -1.285 ppm (= -86 LSB), T_reply 3000 UUS で約 -591 mm
+    const int32_t corr = ssCfoCorrectedMm(1349, -86, 3000) - 1349;
+    assert(corr <= -585 && corr >= -600);
+    // 符号反転で対称、T_reply に比例
+    assert(ssCfoCorrectedMm(0, 86, 3000) == -ssCfoCorrectedMm(0, -86, 3000));
+    const int32_t half = ssCfoCorrectedMm(0, 86, 1500);
+    const int32_t full = ssCfoCorrectedMm(0, 86, 3000);
+    assert(full - 2 * half >= -1 && full - 2 * half <= 1);
+}
+
 int main() {
     test_slot_index();
     test_in_slot_windows();
@@ -103,6 +117,7 @@ int main() {
     test_superframe_index();
     test_build_ranges_json();
     test_parse_anchors_json();
+    test_ss_cfo_correction();
     printf("all native tests passed\n");
     return 0;
 }
