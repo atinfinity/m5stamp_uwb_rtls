@@ -81,7 +81,7 @@ static void initUwbOrHalt() {
 }
 
 void setup() {
-    Serial.begin(115200);
+    rtls::beginSerial(115200);
     delay(1000);
     initUwbOrHalt();
 }

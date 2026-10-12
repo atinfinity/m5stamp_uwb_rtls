@@ -43,6 +43,16 @@ constexpr uint32_t kDsResultRepeatGapMs              = 3;
 // 4 台 × 20 ms ではスロット予算 90 ms を超えるため小さく始め、Step 1 で実測して確定)。
 constexpr uint32_t kDsInterAnchorGapMs               = 2;
 
+// USB シリアル (USB-Serial/JTAG の HWCDC) を開始する。PC に USB 接続したままポートを
+// 誰も開いていないと送信が詰まり、出力 1 回で最大 ~2 s 待たされて測距ループが止まる
+// (Issue #54)。送信タイムアウトを 0 にして、送れない分は捨てる。
+inline void beginSerial(unsigned long baud) {
+    Serial.begin(baud);
+#if ARDUINO_USB_MODE && ARDUINO_USB_CDC_ON_BOOT
+    Serial.setTxTimeoutMs(0);
+#endif
+}
+
 inline M5Stamp_UWBConfig makeUwbConfig() {
     M5Stamp_UWBConfig config;
     config.pin_cs     = kPinCs;
