@@ -56,9 +56,35 @@ pio run -e tag_step1 -t upload
 ```
 
 アドレス・測距間隔は各`platformio.ini`の`build_flags`(`NODE_ADDR` / `TARGET_ANCHOR` / `RANGE_INTERVAL_MS`)で変更する。
+複数台に書き込むときは**1台ごとに`NODE_ADDR`を書き換えて**から書き込む(重複させない。[configuration.md](../docs/configuration.md)参照)。
 
-> **注**: board定義は汎用の`esp32-c5-devkitc-1`を使用している。書き込みに失敗する場合は
-> `pio device list`でポートを確認し、`upload_port`を明示すること。
+### 書き込み・シリアルモニタの基本操作
+
+PlatformIOの導入は[docs/development.md](../docs/development.md) §1を参照。M5Stamp C5をUSB-CでPCに接続し、
+各プロジェクトのディレクトリ(`firmware/anchor`など)で実行する:
+
+```bash
+pio device list                                       # 接続ポートの確認 (macOS: /dev/cu.usbmodem*、Linux: /dev/ttyACM*)
+pio run -e anchor -t upload                           # ビルド + 書き込み (ポートは自動検出)
+pio run -e anchor -t upload --upload-port /dev/cu.usbmodemXXXX   # 複数台接続時はポートを明示
+pio device monitor                                    # シリアルモニタ (115200 bps、Ctrl+C で終了)
+pio run -e anchor -t upload -t monitor                # 書き込み後そのままモニタ
+```
+
+- `-e`を省略すると`default_envs`(anchor: `anchor` / tag: `tag` / tdoa_poc: `listener`)が対象になる
+- ESP32-C5はUSB直結のため、通常は追加のUSBシリアルドライバは不要
+- M5Stamp C5の実機(macOS)では、`/dev/cu.usbmodem*`として認識され、BOOTボタンを押さずに`-t upload`だけで書き込める。
+  書き込み後は自動でリセットされ、FWが起動する([#54](https://github.com/atinfinity/m5stamp_uwb_rtls/issues/54))
+- USB-CはESP32-C5のUSB-Serial/JTAGに直結している。`Serial`をUSB側へ出すため、`platformio.ini`の`[env]`で
+  `-DARDUINO_USB_MODE=1 -DARDUINO_USB_CDC_ON_BOOT=1`を指定している(未指定だとROMのブートログしか表示されない)。
+  env側で`build_flags`を書くときは、先頭に`${env.build_flags}`を入れて引き継ぐこと
+- PCにUSB接続したままポートを開いていないときや、USBを抜いて給電したときは、シリアル出力は捨てられる
+  (`rtls::beginSerial()`。測距ループは止まらない)。モニタを開く前の出力は欠けることがあるので、起動ヘッダが
+  見えない場合はモニタを開いたままボードをリセットする
+
+> **注**: 書き込みに失敗する場合は`pio device list`でポートを確認し、`--upload-port`(または`upload_port`)を明示すること。
+> ポート自体が見えない場合は、データ通信対応のUSBケーブルか確認する。それでも見えない場合(FWの異常でUSBが落ち続けるなど)は、
+> BOOTボタンを押しながらUSBを接続してダウンロードモードで起動してから再実行する。
 
 ## 計測手順(ds-twr-design.md §6の1. と2.)
 
