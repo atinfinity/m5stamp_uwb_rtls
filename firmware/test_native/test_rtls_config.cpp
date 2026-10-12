@@ -4,6 +4,7 @@
 #include <cmath>
 #include <cstdio>
 #include <cstring>
+#include <string>
 
 #include "rtls_config_msg.h"
 
@@ -63,6 +64,27 @@ static void test_parse_tuning() {
     assert(!parseTuningConfig("{\"v_max_ms\":3.0}", &t, &ver));  // version 必須
 }
 
+// publish_config.py の既定 version (Unix 時刻) を丸めずに読めること。
+// float で読むと 1791778498 も 1791778520 も 1791778560 になり、再配信を捨てていた
+static void test_parse_version_precision() {
+    std::string json(kAnchorsJson);
+    json.replace(json.find("\"version\":7"), strlen("\"version\":7"), "\"version\":1791778498");
+    AnchorsConfig cfg;
+    assert(parseAnchorsConfig(json.c_str(), &cfg));
+    assert(cfg.version == 1791778498u);
+
+    char buf[256];
+    TuningDef t;
+    uint32_t ver = 0;
+    strcpy(buf, "{\"version\":1791778520,\"v_max_ms\":3.0}");
+    assert(parseTuningConfig(buf, &t, &ver));
+    assert(ver == 1791778520u);
+    strcpy(buf, "{\"version\":4294967295,\"v_max_ms\":3.0}");
+    assert(parseTuningConfig(buf, &t, &ver));
+    assert(ver == 4294967295u);
+    assert(!parseTuningConfig("{\"version\":-1,\"v_max_ms\":3.0}", &t, &ver));
+}
+
 static void test_select_cell_hysteresis() {
     char buf[1024];
     strcpy(buf, kAnchorsJson);
@@ -113,6 +135,7 @@ int main() {
     test_parse_anchors_config();
     test_parse_rejects_bad_config();
     test_parse_tuning();
+    test_parse_version_precision();
     test_select_cell_hysteresis();
     test_uart_frame();
     test_position_json();

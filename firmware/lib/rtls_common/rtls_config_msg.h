@@ -11,6 +11,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <cstdio>
+#include <cstdlib>
 #include <cstring>
 
 namespace rtls {
@@ -74,6 +75,23 @@ inline bool findNumber(const char* json, const char* key, float* out) {
     return sscanf(p + strlen(pat), "%f", out) == 1;
 }
 
+// version 用。publish_config.py は既定で Unix 時刻 (秒) を version にするため、
+// float (仮数 24 bit) で読むと 128 刻みに丸められ、短い間隔で再配信した設定を
+// 「同じ version」として捨ててしまう。整数のまま読む。
+inline bool findUint32(const char* json, const char* key, uint32_t* out) {
+    char pat[48];
+    snprintf(pat, sizeof(pat), "\"%s\":", key);
+    const char* p = strstr(json, pat);
+    if (p == nullptr) return false;
+    p += strlen(pat);
+    if (*p < '0' || *p > '9') return false;
+    char* end = nullptr;
+    unsigned long v = strtoul(p, &end, 10);
+    if (end == p || v > 0xFFFFFFFFUL) return false;
+    *out = (uint32_t)v;
+    return true;
+}
+
 }  // namespace detail
 
 // rtls/config/anchors のパース。成功時 true。
@@ -81,9 +99,7 @@ inline bool findNumber(const char* json, const char* key, float* out) {
 //        "anchors":{"0x0010":{"x":0.0,"y":0.0,"z":2.2,"bias_mm":0},...},
 //        "cells":{"A":{"rect":[0,0,25,25],"anchors":["0x0010",...]},...}}
 inline bool parseAnchorsConfig(const char* json, AnchorsConfig* out) {
-    float ver = 0;
-    if (!detail::findNumber(json, "version", &ver)) return false;
-    out->version = (uint32_t)ver;
+    if (!detail::findUint32(json, "version", &out->version)) return false;
     detail::findNumber(json, "tag_height_m", &out->tag_height_m);
 
     const char* anchorsPos = strstr(json, "\"anchors\":{");
@@ -154,9 +170,7 @@ inline bool parseAnchorsConfig(const char* json, AnchorsConfig* out) {
 
 // rtls/config/tuning のパース (存在するキーのみ上書き)。version 必須。
 inline bool parseTuningConfig(const char* json, TuningDef* t, uint32_t* version) {
-    float ver = 0;
-    if (!detail::findNumber(json, "version", &ver)) return false;
-    *version = (uint32_t)ver;
+    if (!detail::findUint32(json, "version", version)) return false;
     detail::findNumber(json, "max_age_ms", &t->max_age_ms);
     detail::findNumber(json, "v_max_ms", &t->v_max_ms);
     detail::findNumber(json, "gate_margin_m", &t->gate_margin_m);
