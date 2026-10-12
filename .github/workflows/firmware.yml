@@ -17,11 +17,10 @@ on:
 
 jobs:
   firmware:
-    # 実機レス期間の FW ビルドチェック (pio run はコンパイルのみ)。
-    # ESP32-C5 の pioarduino board 定義は実機未検証のため、当面は失敗を
-    # ブロッカーにしない (検証後に continue-on-error を外す)。
+    # FW のビルドチェック (pio run はコンパイルのみ)。board 定義
+    # esp32-c5-devkitc-1 で M5Stamp C5 に書き込み・起動できることを実機で
+    # 確認済み (Issue #54) なので、失敗はそのまま CI の失敗にする。
     runs-on: ubuntu-latest
-    continue-on-error: true
     strategy:
       matrix:
         project: [firmware/anchor, firmware/tag, firmware/tdoa_poc]
