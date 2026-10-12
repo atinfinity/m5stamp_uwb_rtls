@@ -340,7 +340,7 @@ static void runRangingCycle(uint64_t cycle_t_ms) {
 }
 
 void setup() {
-    Serial.begin(115200);
+    rtls::beginSerial(115200);
     Serial1.begin(115200, SERIAL_8N1, RTLS_UART_RX, RTLS_UART_TX);
     delay(1000);
     snprintf(topicRanges, sizeof(topicRanges), "rtls/tag/0x%04X/ranges", (unsigned)NODE_ADDR);

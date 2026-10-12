@@ -108,7 +108,7 @@ tests/           pytest (e2e 回帰・C++ 一致試験含む)
 
 1. Issueを立てる → `feature/...`ブランチを切る
 2. 変更 + テスト(§3の4コマンドがローカルで通ること)
-3. PRを作成 → CI(python / firmware-native / firmware ×2)がgreenになってからマージ
+3. PRを作成 → CI(python / firmware-native / firmware ×3)がgreenになってからマージ。firmware(ESP32-C5ビルド)は`firmware/`配下のコード(`.md`以外)を変更したときだけ実行される
 4. 解算アルゴリズムを触る場合は**PythonとC++ を必ず同時に変更**(一致試験が落ちる)
 
 ## トラブルシュート
