@@ -29,7 +29,9 @@ constexpr uint16_t kTagAddrBase     = 0x0001;  // 0x0001〜0x0005
 // ---- DS-TWR タイミング (ds-twr-design.md §3.3, Step 1 実測で確定) ----
 constexpr uint32_t kDsResponseRxAfterTxDelayUus      = 1500;
 constexpr uint32_t kDsResponseTxDelayUus             = 3000;
-constexpr uint32_t kDsFinalTxDelayUus                = 1800;
+// 1800 µs ではアンテナの向き次第でタグの遅延送信が間に合わず TX_START_FAILED が
+// 多発した (成功率 2%)。2600 µs で解消 (ds-twr-design.md §7.4)。
+constexpr uint32_t kDsFinalTxDelayUus                = 2600;
 constexpr uint32_t kDsFinalRxAfterResponseTxDelayUus = 500;
 constexpr uint32_t kDsResultRxAfterFinalTxDelayUus   = 500;
 constexpr uint32_t kDsRxTimeoutUus                   = 3000;
