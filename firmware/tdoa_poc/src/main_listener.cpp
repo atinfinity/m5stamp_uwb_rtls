@@ -15,6 +15,7 @@
 #include <Arduino.h>
 #include <M5Stamp_UWB.h>
 #include <rtls_common.h>
+#include "tdoa_phy.h"
 
 extern "C" {
 #include "qm33120w_sdk/deca_device_api.h"
@@ -32,7 +33,7 @@ static uint32_t lastStats = 0;
 void setup() {
     rtls::beginSerial(115200);
     delay(1000);
-    while (!uwb.begin(rtls::makeUwbConfig(), rtls::makePhyConfig())) {
+    while (!uwb.begin(rtls::makeUwbConfig(), tdoa::makePhyConfig())) {
         Serial.printf("# uwb begin failed: %s — retrying\n", uwb.lastErrorName());
         uwb.hardReset();
         delay(1000);

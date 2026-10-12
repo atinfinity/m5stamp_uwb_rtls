@@ -167,6 +167,10 @@ pio run -e listener -t upload    # ノード2: 受信 + "src,seq,rx_ticks" を C
 判定: listenerの`rx_ticks`がブリンクごとに**単調増加**していれば取得成功
 (増加しない/常に同値なら`receiveFrame()`実装がレジスタを上書きしており、ライブラリ改造が必要)。
 
+> [!NOTE]
+> tdoa_pocのPHYは850 kbps(`include/tdoa_phy.h`)。6.8 Mbpsではブリンクの取りこぼしが多いため(tdoa-design.md §7.2)。
+> anchor/tagファーム(6.8 Mbps)とはデータレートが異なり通信できないので、PoCの全ノードにtdoa_pocのファームを書き込む。
+
 **PoC-2(3ノード): 2アンカー無線同期**
 
 blink_tx 1台 + listener 2台(それぞれPCにシリアル接続しCSVを採取)で:
@@ -179,7 +183,7 @@ uv run python tools/tdoa/sync_analysis.py anchorA.csv anchorB.csv --tag-src 0x00
 ```
 
 解析ロジックは`--selftest`(合成クロック)で実機なしで検証済み。
-結果は成立/不成立にかかわらず[tdoa-design.md](../docs/tdoa-design.md) §3に実測値を記録する。
+結果は成立/不成立にかかわらず[tdoa-design.md](../docs/tdoa-design.md) §7に実測値を記録する。
 
 ## タグCSV出力仕様
 
